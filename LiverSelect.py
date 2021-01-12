@@ -8,12 +8,12 @@ class OutlinedLabel(QLabel):
         self.setFont(QFont('微软雅黑', size, QFont.Bold))
         self.setStyleSheet('background-color:#00000000')
         self.setText(text)
-        self.setBrush(QColor(fontColor))
+        self.setBrush(fontColor)
         self.setPen(outColor)
 
     def setBrush(self, brush):
         if not isinstance(brush, QBrush):
-            brush = QBrush(brush)
+            brush = QBrush(QColor(brush))
         self.brush = brush
 
     def setPen(self, pen):
@@ -108,21 +108,26 @@ class DownloadImage(QThread):
 class CoverLabel(QLabel):
     addToWindow = pyqtSignal(list)
     deleteCover = pyqtSignal(int)
+    changeTopToken = pyqtSignal(list)
 
-    def __init__(self, index, roomID):
+    def __init__(self, roomID, topToken=False):
         super(CoverLabel, self).__init__()
         self.setAcceptDrops(True)
-        self.index = index
         self.roomID = roomID
+        self.topToken = topToken
         self.setFixedSize(160, 90)
         self.setStyleSheet('background-color:#708090')  # 灰色背景
         self.firstUpdateToken = True
         self.layout = QGridLayout(self)
         self.profile = CircleImage()
         self.layout.addWidget(self.profile, 0, 4, 3, 2)
-        self.titleLabel = OutlinedLabel()
+        if topToken:
+            brush = '#FFC125'
+        else:
+            brush = '#FFFFFF'
+        self.titleLabel = OutlinedLabel(fontColor=brush)
         self.layout.addWidget(self.titleLabel, 0, 0, 1, 6)
-        self.roomIDLabel = OutlinedLabel(str(roomID))
+        self.roomIDLabel = OutlinedLabel(str(roomID), fontColor=brush)
         self.layout.addWidget(self.roomIDLabel, 1, 0, 1, 6)
         self.stateLabel = OutlinedLabel(size=13)
         self.stateLabel.setText('检测中')
@@ -177,16 +182,29 @@ class CoverLabel(QLabel):
             drag.exec_()
         elif QMouseEvent.button() == Qt.RightButton:
             menu = QMenu()
-            addTo = menu.addMenu('添加至')
+            addTo = menu.addMenu('添加至窗口>')
             addWindow = []
             for win in range(1, 10):
                 addWindow.append(addTo.addAction('窗口%s' % win))
+            if not self.topToken:
+                top = menu.addAction('添加置顶')
+            else:
+                top = menu.addAction('取消置顶')
             delete = menu.addAction('删除')
             action = menu.exec_(self.mapToGlobal(QMouseEvent.pos()))
             if action == delete:
                 self.deleteCover.emit(self.roomID)
                 self.roomID = 0
                 self.hide()
+            elif action == top:
+                if self.topToken:
+                    self.titleLabel.setBrush('#FFFFFF')
+                    self.roomIDLabel.setBrush('#FFFFFF')
+                else:
+                    self.titleLabel.setBrush('#FFC125')
+                    self.roomIDLabel.setBrush('#FFC125')
+                self.topToken = not self.topToken
+                self.changeTopToken.emit([self.roomID, self.topToken])  # 发送修改后的置顶token
             else:
                 for index, i in enumerate(addWindow):
                     if action == i:
@@ -413,33 +431,37 @@ class CollectLiverInfo(QThread):
                         liverInfo.append([None, str(roomID)])
             if liverInfo:
                 self.liverInfo.emit(liverInfo)
-            time.sleep(15)  # 冷却时间
+            time.sleep(20)  # 冷却时间
 
 
 class LiverPanel(QWidget):
     addToWindow = pyqtSignal(list)
+    dumpConfig = pyqtSignal()
+    refreshIDList = pyqtSignal(list)
 
-    def __init__(self, roomIDList):
+    def __init__(self, roomIDDict):
         super(LiverPanel, self).__init__()
+        self.oldLiveStatus = {}
         self.addLiverRoomWidget = AddLiverRoomWidget()
         self.addLiverRoomWidget.roomList.connect(self.addLiverRoomList)
         self.layout = QHBoxLayout(self)
         self.layout.setSpacing(5)
         self.layout.setContentsMargins(2, 2, 2, 2)
-        # self.addButton = QPushButton('+')
-        # self.addButton.setFixedSize(160, 90)
-        # self.addButton.setStyleSheet('border:3px dotted #EEEEEE')
-        # self.addButton.setFont(QFont('Arial', 24, QFont.Bold))
-        # self.addButton.clicked.connect(self.openLiverRoomPanel)
-        # self.layout.addWidget(self.addButton)
         self.coverList = []
-        for index, id in enumerate(roomIDList):
-            self.coverList.append(CoverLabel(index, id))
+        for roomID, topToken in roomIDDict.items():
+            roomID = int(roomID)
+            self.coverList.append(CoverLabel(roomID, topToken))
             self.coverList[-1].addToWindow.connect(self.addCoverToPlayer)  # 添加至窗口播放信号
             self.coverList[-1].deleteCover.connect(self.deleteCover)
-            self.layout.addWidget(self.coverList[index])
-        self.roomIDList = roomIDList
-        self.collectLiverInfo = CollectLiverInfo(self.roomIDList)
+            self.coverList[-1].changeTopToken.connect(self.changeTop)
+        for cover in self.coverList:  # 先添加置顶卡片
+            if cover.topToken:
+                self.layout.addWidget(cover)
+        for cover in self.coverList:  # 再添加普通卡片
+            if not cover.topToken:
+                self.layout.addWidget(cover)
+        self.roomIDDict = roomIDDict
+        self.collectLiverInfo = CollectLiverInfo(list(map(int, self.roomIDDict.keys())))  # 转成整型
         self.collectLiverInfo.liverInfo.connect(self.refreshRoomPanel)
         self.collectLiverInfo.start()
 
@@ -458,37 +480,58 @@ class LiverPanel(QWidget):
                     roomID = data['room_info']['room_id']
                 except:
                     pass
-            if roomID not in self.roomIDList:
+            if roomID not in self.roomIDDict:
                 newID.append(roomID)
-        lens = len(self.coverList)
-        for index, id in enumerate(newID):  # 添加id并创建新的预览图卡
-            self.coverList.append(CoverLabel(lens + index, id))
-            self.coverList[-1].addToWindow.connect(self.addCoverToPlayer)
+        for index, roomID in enumerate(newID):  # 添加id并创建新的预览图卡
+            roomID = int(roomID)
+            self.coverList.append(CoverLabel(roomID, False))
+            self.coverList[-1].addToWindow.connect(self.addCoverToPlayer)  # 添加至播放窗口
             self.coverList[-1].deleteCover.connect(self.deleteCover)
-            self.roomIDList.append(id)
+            self.coverList[-1].changeTopToken.connect(self.changeTop)
+            self.roomIDDict[roomID] = False  # 添加普通卡片
+        self.collectLiverInfo.setRoomIDList(list(map(int, self.roomIDDict.keys())))  # 更新需要刷新的房间列表
         self.collectLiverInfo.terminate()
         self.collectLiverInfo.start()
+        self.dumpConfig.emit()  # 发送保存config信号
 
     def refreshRoomPanel(self, liverInfo):  # 异步刷新图卡
+        roomIDToRefresh = []
         for index, info in enumerate(liverInfo):
             if info[0]:  # uid有效
                 for cover in self.coverList:
                     if cover.roomID == int(info[1]):
                         cover.updateLabel(info)
+                if info[1] not in self.oldLiveStatus:  # 第一次更新添加
+                    self.oldLiveStatus[info[1]] = info[4]  # 房号: 直播状态
+                elif self.oldLiveStatus[info[1]] != info[4]:  # 状态发生变化
+                    roomIDToRefresh.append(int(info[1]))  # 发送给主界面要刷新的房间号
+                    # oldStatus = '直播中' if self.oldLiveStatus[info[1]] == 1 else '未开播'
+                    # newStatus = '直播中' if info[4] == 1 else '未开播'
+                    self.oldLiveStatus[info[1]] = info[4]  # 更新旧的直播状态列表
+        if roomIDToRefresh:
+            self.refreshIDList.emit(roomIDToRefresh)
         self.refreshPanel()
 
     def addCoverToPlayer(self, info):
         self.addToWindow.emit(info)
 
     def deleteCover(self, roomID):
-        self.roomIDList.remove(roomID)  # 删除roomID
+        del self.roomIDDict[roomID]  # 删除roomID
+        self.collectLiverInfo.setRoomIDList(list(map(int, self.roomIDDict.keys())))  # 更新需要刷新的房间列表
         self.refreshPanel()
+        self.dumpConfig.emit()  # 发送保存config信号
+
+    def changeTop(self, info):
+        self.roomIDDict[int(info[0])] = info[1]  # 房号 置顶token
+        self.refreshPanel()
+        self.dumpConfig.emit()  # 发送保存config信号
 
     def refreshPanel(self):
-        for liveState in [1, 0, -1]:  # 按顺序添加正在直播的 没在直播的 还有错误的卡片
-            for cover in self.coverList:
-                if cover.liveState == liveState:
-                    self.layout.addWidget(cover)
+        for topToken in [True, False]:
+            for liveState in [1, 0, -1]:  # 按顺序添加正在直播的 没在直播的 还有错误的卡片
+                for cover in self.coverList:
+                    if cover.liveState == liveState and cover.topToken == topToken:  # 符合条件的卡片
+                        self.layout.addWidget(cover)
         for cover in self.coverList:
             cover.hide()
             if cover.liveState in [1, 0, -1] and cover.roomID:

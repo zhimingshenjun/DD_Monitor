@@ -164,6 +164,7 @@ class VideoWidget(QWidget):
         self.rightButtonPress = False
         self.fullScreen = False
         self.top = top
+        self.opacity = 100
         if top:
             self.setWindowFlag(Qt.WindowStaysOnTopHint)
         if title:
@@ -261,8 +262,13 @@ class VideoWidget(QWidget):
         self.topLabel.hide()
         self.frame.hide()
 
+    def mouseDoubleClickEvent(self, QMouseEvent):
+        if not self.top:  # 非弹出类悬浮窗
+            self.popWindow.emit([self.id, self.roomID, self.quality, True])
+            self.mediaPlay(1)  # 暂停播放
+
     def closeEvent(self, QCloseEvent):  # 这个closeEvent只是给悬浮窗用的
-        self.player.stop()
+        self.player.setMedia(QMediaContent(QUrl('')))
         self.danmu.terminate()
         self.danmu.quit()
 
@@ -313,6 +319,23 @@ class VideoWidget(QWidget):
             lowQuality.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
         if not self.top:  # 非弹出类悬浮窗
             popWindow = menu.addAction('悬浮窗播放')
+        else:
+            opacityMenu = menu.addMenu('调节透明度')
+            percent100 = opacityMenu.addAction('100%')
+            if self.opacity == 100:
+                percent100.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
+            percent80 = opacityMenu.addAction('80%')
+            if self.opacity == 80:
+                percent80.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
+            percent60 = opacityMenu.addAction('60%')
+            if self.opacity == 60:
+                percent60.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
+            percent40 = opacityMenu.addAction('40%')
+            if self.opacity == 40:
+                percent40.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
+            percent20 = opacityMenu.addAction('20%')
+            if self.opacity == 20:
+                percent20.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
         action = menu.exec_(self.mapToGlobal(event.pos()))
         if action == openBrowser:
             if self.roomID:
@@ -333,9 +356,26 @@ class VideoWidget(QWidget):
             self.changeQuality.emit([self.id, 80])
             self.quality = 80
             self.mediaReload()
-        elif action == popWindow:
-            self.popWindow.emit([self.id, self.roomID, self.quality])
-            self.mediaPlay(1)  # 暂停播放
+        if not self.top:
+            if action == popWindow:
+                self.popWindow.emit([self.id, self.roomID, self.quality, False])
+                self.mediaPlay(1)  # 暂停播放
+        elif self.top:
+            if action == percent100:
+                self.setWindowOpacity(1)
+                self.opacity = 100
+            elif action == percent80:
+                self.setWindowOpacity(0.8)
+                self.opacity = 80
+            elif action == percent60:
+                self.setWindowOpacity(0.6)
+                self.opacity = 60
+            elif action == percent40:
+                self.setWindowOpacity(0.4)
+                self.opacity = 40
+            elif action == percent20:
+                self.setWindowOpacity(0.2)
+                self.opacity = 20
 
     def resizeEvent(self, QEvent):
         self.scene.setSceneRect(1, 1, self.width() - 2, self.height() - 2)
@@ -353,6 +393,8 @@ class VideoWidget(QWidget):
             self.translator.textBrowser.setFont(QFont('Microsoft JhengHei', 10, QFont.Bold))
         self.textBrowser.move(0, 0)
         self.translator.move(0, self.textBrowser.height())
+        self.textBrowser.textBrowser.verticalScrollBar().setValue(100000000)
+        self.translator.textBrowser.verticalScrollBar().setValue(100000000)
         self.resizeTimer.start(50)  # 延迟50ms修改video窗口 否则容易崩溃
 
     def resizeVideoItem(self):
@@ -411,26 +453,28 @@ class VideoWidget(QWidget):
 
     def mediaReload(self):
         if self.roomID:
-            self.player.stop()
+            # self.player.stop()
             self.getMediaURL.setConfig(self.roomID, self.quality)  # 设置房号和画质
             self.getMediaURL.start()
+        else:
+            self.mediaStop()
 
     def mediaStop(self):
-        if self.roomID:
-            self.roomID = 0
-            self.url = QMediaContent(QUrl(''))
-            self.topLabel.setText('    窗口%s  未定义的直播间' % (self.id + 1))
-            self.titleLabel.setText('未定义')
-            self.player.stop()
-            self.play.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
-            self.deleteMedia.emit(self.id)
-            try:
-                self.danmu.message.disconnect(self.playDanmu)
-            except:
-                pass
-            self.danmu.terminate()
-            self.danmu.quit()
-            self.danmu.wait()
+        self.roomID = 0
+        self.url = QMediaContent(QUrl(''))
+        self.topLabel.setText('    窗口%s  未定义的直播间' % (self.id + 1))
+        self.titleLabel.setText('未定义')
+        # self.player.stop()
+        self.player.setMedia(self.url)
+        self.play.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
+        self.deleteMedia.emit(self.id)
+        try:
+            self.danmu.message.disconnect(self.playDanmu)
+        except:
+            pass
+        self.danmu.terminate()
+        self.danmu.quit()
+        self.danmu.wait()
 
     def setMedia(self, qurl):
         self.setTitle()
@@ -470,13 +514,8 @@ class VideoWidget(QWidget):
         self.titleLabel.setText(uname)
 
     def playDanmu(self, message):
-        # text = self.textBrowser.textBrowser.toPlainText()
-        # if len(text) > 1000000:
-        #     text = text[-1000000:]
-        #     self.textBrowser.textBrowser.setText(text)
-        #     self.textBrowser.textBrowser.verticalScrollBar().setValue(100000000)
         token = False
-        for symbol in ['【', '[', '{', '(', '（']:
+        for symbol in ['【', '[', '{']:
             if symbol in message:
                 self.translator.textBrowser.append(message)
                 token = True
