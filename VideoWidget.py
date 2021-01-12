@@ -382,12 +382,12 @@ class VideoWidget(QWidget):
         width = self.width() * 0.2
         self.textBrowser.resize(width, self.height() * 0.6)
         self.translator.resize(width, self.height() * 0.4)
-        if width > 300:
-            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 16, QFont.Bold))
-            self.translator.textBrowser.setFont(QFont('Microsoft JhengHei', 16, QFont.Bold))
-        elif 200 < width <= 300:
-            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', width // 20, QFont.Bold))
-            self.translator.textBrowser.setFont(QFont('Microsoft JhengHei', width // 20, QFont.Bold))
+        if width > 200:
+            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 15, QFont.Bold))
+            self.translator.textBrowser.setFont(QFont('Microsoft JhengHei', 15, QFont.Bold))
+        elif 100 < width <= 200:
+            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 5, QFont.Bold))
+            self.translator.textBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 5, QFont.Bold))
         else:
             self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 10, QFont.Bold))
             self.translator.textBrowser.setFont(QFont('Microsoft JhengHei', 10, QFont.Bold))
