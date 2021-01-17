@@ -1,8 +1,19 @@
-import os, sys, json
+'''
+DD监控室主界面进程 包含对所有子页面的初始化、排版管理
+同时卡片和播放窗口的交互需要通过主界面线程通信
+以及软件启动和退出后的一些操作
+新增全局鼠标坐标跟踪 用于刷新鼠标交互效果
+'''
+import os, sys, json, time, shutil
 from PyQt5.Qt import *
 from LayoutPanel import LayoutSettingPanel
-from VideoWidget import PushButton, Slider, VideoWidget
+# from VideoWidget import PushButton, Slider, VideoWidget
+from VideoWidget_vlc import PushButton, Slider, VideoWidget
 from LiverSelect import LiverPanel
+
+
+def _translate(context, text, disambig):
+    return QApplication.translate(context, text, disambig)
 
 
 class ScrollArea(QScrollArea):
@@ -21,10 +32,27 @@ class ScrollArea(QScrollArea):
 class Version(QWidget):
     def __init__(self):
         super(Version, self).__init__()
-        self.resize(400, 150)
+        self.resize(350, 150)
+        self.setWindowTitle('当前版本')
         layout = QGridLayout(self)
-        layout.addWidget(QLabel('DD监控室 v0.0.7测试版'), 0, 0)
-        layout.addWidget(QLabel('by 神君Channel：https://space.bilibili.com/637783'))
+        layout.addWidget(QLabel('DD监控室 v0.1测试版（vlc内核）'), 0, 0, 1, 2)
+        layout.addWidget(QLabel('by 神君Channel'), 1, 0, 1, 1)
+        releases_url = QLabel('')
+        releases_url.setOpenExternalLinks(True)
+        releases_url.setText(_translate("MainWindow", "<html><head/><body><p><a href=\"https://space.bilibili.com/637783\">\
+<span style=\" text-decoration: underline; color:#cccccc;\">https://space.bilibili.com/637783</span></a></p></body></html>", None))
+        layout.addWidget(releases_url, 1, 1, 1, 1)
+
+
+class HotKey(QWidget):
+    def __init__(self):
+        super(HotKey, self).__init__()
+        self.resize(350, 150)
+        self.setWindowTitle('快捷键')
+        layout = QGridLayout(self)
+        layout.addWidget(QLabel('F、f —— 全屏'), 0, 0)
+        layout.addWidget(QLabel('H、h —— 隐藏控制条'), 1, 0)
+        layout.addWidget(QLabel('M、m —— 除当前鼠标悬停窗口外全部静音'), 2, 0)
 
 
 class DumpConfig(QThread):
@@ -33,18 +61,17 @@ class DumpConfig(QThread):
         self.config = config
 
     def run(self):
-        # while 0 in self.config['roomid']:
-        #     self.config['roomid'].remove(0)
         with open(r'utils/config.json', 'w') as f:
             f.write(json.dumps(self.config, ensure_ascii=False))
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, cacheFolder):
         super(MainWindow, self).__init__()
         self.setWindowTitle('DD监控室')
         self.resize(1600, 900)
         self.maximumToken = True
+        self.cacheFolder = cacheFolder
         if os.path.exists(r'utils/config.json'):
             self.config = json.loads(open(r'utils/config.json').read())
             while len(self.config['player']) < 9:
@@ -58,17 +85,20 @@ class MainWindow(QMainWindow):
                 self.config['quality'] = [80] * 9
             if 'translator' not in self.config:
                 self.config['translator'] = [True] * 9
+            for index, textSetting in enumerate(self.config['danmu']):
+                if type(textSetting) == bool:
+                    self.config['danmu'][index] = [textSetting, 20, 2, 6, 0, '【 [ {']
         else:
             self.config = {
                 'roomid': {'21463219': False, '21501730': False, '21096962': False, '21449068': False},  # 置顶显示
                 'layout': [(0, 0, 1, 1), (0, 1, 1, 1), (1, 0, 1, 1), (1, 1, 1, 1)],
-                'player': [21463219, 21501730, 21096962, 21449068, 0, 0, 0, 0, 0],
+                'player': ['21463219', '21501730', '21096962', '21449068', '0', '0', '0', '0', '0'],
                 'quality': [80] * 9,
                 'muted': [1] * 9,
-                'volume': [25] * 9,
-                'danmu': [True] * 9,
-                'translator': [True] * 9,
-                'globalVolume': 25,
+                'volume': [50] * 9,
+                'danmu': [[True, 20, 2, 6, 0, '【 [ {']] * 9,  # 显示弹幕, 透明度, 横向占比, 纵向占比, 显示同传, 同传过滤字符
+                # 'translator': [True] * 9,
+                'globalVolume': 30,
                 'control': True,
             }
         self.dumpConfig = DumpConfig(self.config)
@@ -80,10 +110,15 @@ class MainWindow(QMainWindow):
         self.layoutSettingPanel = LayoutSettingPanel()
         self.layoutSettingPanel.layoutConfig.connect(self.changeLayout)
         self.version = Version()
+        self.hotKey = HotKey()
 
         self.videoWidgetList = []
+        self.popVideoWidgetList = []
         for i in range(9):
-            self.videoWidgetList.append(VideoWidget(i))
+            volume = self.config['volume'][i]
+            self.videoWidgetList.append(VideoWidget(i, volume, cacheFolder, textSetting=self.config['danmu'][i]))
+            # self.videoWidgetList[i].show()
+            # self.videoWidgetList[i].hide()
             self.videoWidgetList[i].mutedChanged.connect(self.mutedChanged)
             self.videoWidgetList[i].volumeChanged.connect(self.volumeChanged)
             self.videoWidgetList[i].addMedia.connect(self.addMedia)
@@ -93,20 +128,18 @@ class MainWindow(QMainWindow):
             self.videoWidgetList[i].setTranslator.connect(self.setTranslator)
             self.videoWidgetList[i].changeQuality.connect(self.setQuality)
             self.videoWidgetList[i].popWindow.connect(self.popWindow)
+            self.videoWidgetList[i].hideBarKey.connect(self.openControlPanel)
+            self.videoWidgetList[i].fullScreenKey.connect(self.fullScreen)
+            self.videoWidgetList[i].muteExceptKey.connect(self.muteExcept)
             self.videoWidgetList[i].mediaMute(self.config['muted'][i], emit=False)
-            self.videoWidgetList[i].player.setVolume(self.config['volume'][i])
             self.videoWidgetList[i].slider.setValue(self.config['volume'][i])
             self.videoWidgetList[i].quality = self.config['quality'][i]
-            if self.config['danmu'][i]:
+            if self.config['danmu'][i][0]:  # 显示弹幕窗
                 self.videoWidgetList[i].textBrowser.show()
             else:
                 self.videoWidgetList[i].textBrowser.hide()
-            if self.config['translator'][i]:
-                self.videoWidgetList[i].translator.show()
-            else:
-                self.videoWidgetList[i].translator.hide()
-        # self.popVideoWidgetList = []  # 置顶的悬浮窗
-        self.popVideoWidget = VideoWidget(10, True, '悬浮窗', [1280, 720])
+            self.popVideoWidgetList.append(VideoWidget(i + 9, volume, cacheFolder, True, '悬浮窗', [1280, 720]))
+            # self.popVideoWidgetList[i].textBrowser.hide()
         self.setPlayer()
 
         self.controlBar = QToolBar()
@@ -121,9 +154,9 @@ class MainWindow(QMainWindow):
         self.reload.clicked.connect(self.globalMediaReload)
         self.controlBar.addWidget(self.reload)
         self.globalMuteToken = False
-        self.volume = PushButton(self.style().standardIcon(QStyle.SP_MediaVolume))
-        self.volume.clicked.connect(self.globalMediaMute)
-        self.controlBar.addWidget(self.volume)
+        self.volumeButton = PushButton(self.style().standardIcon(QStyle.SP_MediaVolume))
+        self.volumeButton.clicked.connect(self.globalMediaMute)
+        self.controlBar.addWidget(self.volumeButton)
         self.slider = Slider()
         self.slider.setValue(self.config['globalVolume'])
         self.slider.value.connect(self.globalSetVolume)
@@ -156,25 +189,49 @@ class MainWindow(QMainWindow):
         self.controlBarToken = self.config['control']
         layoutConfigAction = QAction('布局方式', self, triggered=self.openLayoutSetting)
         self.optionMenu.addAction(layoutConfigAction)
-        controlPanelAction = QAction('显示/隐藏控制条', self, triggered=self.openControlPanel)
+        globalQualityMenu = self.optionMenu.addMenu('全局画质')
+        originQualityAction = QAction('原画', self, triggered=lambda: self.globalQuality(10000))
+        globalQualityMenu.addAction(originQualityAction)
+        bluerayQualityAction = QAction('蓝光', self, triggered=lambda: self.globalQuality(400))
+        globalQualityMenu.addAction(bluerayQualityAction)
+        highQualityAction = QAction('超清', self, triggered=lambda: self.globalQuality(250))
+        globalQualityMenu.addAction(highQualityAction)
+        lowQualityAction = QAction('流畅', self, triggered=lambda: self.globalQuality(80))
+        globalQualityMenu.addAction(lowQualityAction)
+        controlPanelAction = QAction('显示 / 隐藏控制条(H)', self, triggered=self.openControlPanel)
         self.optionMenu.addAction(controlPanelAction)
-        self.fullScreenAction = QAction('全屏显示 (Esc退出)', self, triggered=self.fullScreen)
+        self.fullScreenAction = QAction('全屏(F) / 退出(Esc)', self, triggered=self.fullScreen)
         self.optionMenu.addAction(self.fullScreenAction)
 
-        self.versionMenu = self.menuBar().addMenu('版本')
+        self.versionMenu = self.menuBar().addMenu('关于DD监控室')
+        githubAction = QAction('GitHub', self, triggered=self.openGithub)
+        self.versionMenu.addAction(githubAction)
+        bilibiliAction = QAction('B站', self, triggered=self.openBilibili)
+        self.versionMenu.addAction(bilibiliAction)
+        hotKeyAction = QAction('快捷键', self, triggered=self.openHotKey)
+        self.versionMenu.addAction(hotKeyAction)
         versionAction = QAction('当前版本', self, triggered=self.openVersion)
         self.versionMenu.addAction(versionAction)
 
+        self.oldMousePos = QPoint(0, 0)  # 初始化鼠标坐标
+        self.hideMouseCnt = 90
+        self.mouseTrackTimer = QTimer()
+        self.mouseTrackTimer.timeout.connect(self.checkMousePos)
+        self.mouseTrackTimer.start(500)  # 0.5s检测一次
+
     def setPlayer(self):
         for index, layoutConfig in enumerate(self.config['layout']):
-            id = self.config['player'][index]
-            self.videoWidgetList[index].roomID = id
+            roomID = self.config['player'][index]
+            videoWidget = self.videoWidgetList[index]
+            videoWidget.roomID = str(roomID)  # 转一下防止格式出错
             y, x, h, w = layoutConfig
-            self.mainLayout.addWidget(self.videoWidgetList[index], y, x, h, w)
+            self.mainLayout.addWidget(videoWidget, y, x, h, w)
+            self.videoWidgetList[index].show()
         self.videoIndex = 0
         self.setMediaTimer = QTimer()
         self.setMediaTimer.timeout.connect(self.setMedia)
-        self.setMediaTimer.start(500)
+        # self.setMediaTimer.start(500)  # QMediaPlayer加载慢一点 否则容易崩
+        self.setMediaTimer.start(10)  # vlc
 
     def setMedia(self):
         if self.videoIndex == 9:
@@ -183,7 +240,7 @@ class MainWindow(QMainWindow):
             # pass
             self.videoWidgetList[self.videoIndex].mediaReload()
         else:
-            self.videoWidgetList[self.videoIndex].player.setMedia(QMediaContent(QUrl('')))
+            self.videoWidgetList[self.videoIndex].player.stop()
         self.videoIndex += 1
 
     def addMedia(self, info):  # 窗口 房号
@@ -195,15 +252,23 @@ class MainWindow(QMainWindow):
         self.config['player'][id] = 0
         self.dumpConfig.start()
 
-    def exchangeMedia(self, info):  # 窗口 房号
-        toID, fromRoomID, fromID, toRoomID = info
-        self.config['player'][toID] = fromRoomID
+    def exchangeMedia(self, info):  # 交换播放窗口的函数
+        fromID, fromRoomID, toID, toRoomID = info  # 交换数据
+        fromVideo, toVideo = self.videoWidgetList[fromID], self.videoWidgetList[toID]  # 待交换的两个控件
+        fromVideo.id, toVideo.id = toID, fromID  # 交换id
+        fromVideo.topLabel.setText(fromVideo.topLabel.text().replace('窗口%s' % (fromID + 1), '窗口%s' % (toID + 1)))
+        toVideo.topLabel.setText(toVideo.topLabel.text().replace('窗口%s' % (toID + 1), '窗口%s' % (fromID + 1)))
+        fromMuted, toMuted = self.config['muted'][fromID], self.config['muted'][toID]  # 获取原来的静音设置
+        fromVolume, toVolume = self.config['volume'][fromID], self.config['volume'][toID]  # 获取原来的音量
+        fromVideo.mediaMute(toMuted)  # 交换静音设置
+        fromVideo.setVolume(toVolume)  # 交换音量
+        toVideo.mediaMute(fromMuted)
+        toVideo.setVolume(fromVolume)
+        self.videoWidgetList[fromID], self.videoWidgetList[toID] = toVideo, fromVideo  # 交换控件列表
+        self.config['player'][toID] = fromRoomID  # 记录config
         self.config['player'][fromID] = toRoomID
-        self.videoWidgetList[fromID].roomID = toRoomID
-        self.videoWidgetList[fromID].textBrowser.textBrowser.clear()
-        self.videoWidgetList[fromID].translator.textBrowser.clear()
-        self.videoWidgetList[fromID].mediaReload()
         self.dumpConfig.start()
+        self.changeLayout(self.config['layout'])  # 刷新layout
 
     def setDanmu(self, info):
         id, token = info  # 窗口 弹幕显示布尔值
@@ -222,13 +287,13 @@ class MainWindow(QMainWindow):
 
     def popWindow(self, info):  # 悬浮窗播放
         id, roomID, quality, showMax = info
-        self.popVideoWidget.roomID = roomID
-        self.popVideoWidget.quality = quality
+        self.popVideoWidgetList[id].roomID = roomID
+        self.popVideoWidgetList[id].quality = quality
+        self.popVideoWidgetList[id].resize(1280, 720)
+        self.popVideoWidgetList[id].show()
         if showMax:
-            self.popVideoWidget.showMaximized()
-        else:
-            self.popVideoWidget.show()
-        self.popVideoWidget.mediaReload()
+            self.popVideoWidgetList[id].showMaximized()
+        self.popVideoWidgetList[id].mediaReload()
 
     def mutedChanged(self, mutedInfo):
         id, muted = mutedInfo
@@ -259,10 +324,10 @@ class MainWindow(QMainWindow):
     def globalMediaMute(self):
         if self.globalMuteToken:
             force = 1
-            self.volume.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
+            self.volumeButton.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
         else:
             force = 2
-            self.volume.setIcon(self.style().standardIcon(QStyle.SP_MediaVolumeMuted))
+            self.volumeButton.setIcon(self.style().standardIcon(QStyle.SP_MediaVolumeMuted))
         self.globalMuteToken = not self.globalMuteToken
         for videoWidget in self.videoWidgetList:
             videoWidget.mediaMute(force)
@@ -271,7 +336,8 @@ class MainWindow(QMainWindow):
 
     def globalSetVolume(self, value):
         for videoWidget in self.videoWidgetList:
-            videoWidget.player.setVolume(value)
+            videoWidget.player.audio_set_volume(value)
+            videoWidget.volume = value
             videoWidget.slider.setValue(value)
         self.config['volume'] = [value] * 9
         self.config['globalVolume'] = value
@@ -280,6 +346,12 @@ class MainWindow(QMainWindow):
     def globalMediaStop(self):
         for videoWidget in self.videoWidgetList:
             videoWidget.mediaStop()
+
+    def globalQuality(self, quality):
+        for videoWidget in self.videoWidgetList:
+            videoWidget.quality = quality
+            videoWidget.mediaReload()
+        self.config['quality'] = [quality] * 9
 
     def openControlPanel(self):
         self.controlBar.hide() if self.controlBarToken else self.controlBar.show()
@@ -291,15 +363,65 @@ class MainWindow(QMainWindow):
         self.version.hide()
         self.version.show()
 
+    def openGithub(self):
+        QDesktopServices.openUrl(QUrl(r'https://github.com/zhimingshenjun/DD_Monitor'))
+
+    def openBilibili(self):
+        QDesktopServices.openUrl(QUrl(r'https://www.bilibili.com/video/BV1yo4y1d7iP'))
+
+    def openHotKey(self):
+        self.hotKey.hide()
+        self.hotKey.show()
+
+    def checkMousePos(self):
+        for videoWidget in self.videoWidgetList:  # vlc的播放会直接音量最大化 实在没地方放了 写在这里实时强制修改它的音量
+            videoWidget.player.audio_set_volume(videoWidget.volume)
+            # if not videoWidget.isHidden():
+            #     videoPos = self.mapToGlobal(videoWidget.pos())
+            #     videoX, videoY = videoPos.x(), videoPos.y() + 135
+            #     videoW, videoH = videoWidget.width(), videoWidget.height()
+            #     textX, textY = videoWidget.textBrowser.pos().x(), videoWidget.textBrowser.pos().y()
+            #     textW, textH = videoWidget.textBrowser.width(), videoWidget.textBrowser.height()
+            #     moveToken = False
+            #     if textH > videoH:
+            #         textX, textY = videoX, videoY
+            #         moveToken = True
+            #     else:
+            #         if textX < videoX: textX = videoX; moveToken = True
+            #         elif textX > videoX + videoW - textW: textX = videoX + videoW - textW; moveToken = True
+            #         if textY < videoY: textY = videoY; moveToken = True
+            #         elif textY > videoY + videoH - textH: textY = videoY + videoH - textH; moveToken = True
+            #     if moveToken:
+            #         videoWidget.textBrowser.move(textX, textY)
+        newMousePos = QCursor.pos()
+        if newMousePos != self.oldMousePos:
+            self.setCursor(Qt.ArrowCursor)  # 鼠标动起来就显示
+            self.oldMousePos = newMousePos
+            self.hideMouseCnt = 6  # 刷新隐藏鼠标的间隔
+        if self.hideMouseCnt > 0:
+            self.hideMouseCnt -= 1
+        else:
+            self.setCursor(Qt.BlankCursor)  # 计数归零隐藏鼠标
+            for videoWidget in self.videoWidgetList:
+                videoWidget.topLabel.hide()  # 隐藏播放窗口的控制条
+                videoWidget.frame.hide()
+            for videoWidget in self.popVideoWidgetList:
+                videoWidget.topLabel.hide()  # 隐藏悬浮窗口的控制条
+                videoWidget.frame.hide()
+
     def closeEvent(self, QCloseEvent):
         self.hide()
         self.layoutSettingPanel.close()
         self.liverPanel.addLiverRoomWidget.close()
         for videoWidget in self.videoWidgetList:
             videoWidget.player.stop()
-        for videoWidget in self.videoWidgetList:
-            videoWidget.danmu.terminate()
-            videoWidget.danmu.quit()
+            videoWidget.getMediaURL.recordToken = False  # 关闭缓存并清除
+            videoWidget.getMediaURL.checkTimer.stop()
+        for videoWidget in self.popVideoWidgetList:  # 关闭悬浮窗
+            videoWidget.player.stop()
+            videoWidget.getMediaURL.recordToken = False
+            videoWidget.getMediaURL.checkTimer.stop()
+            videoWidget.close()
         self.dumpConfig.start()
 
     def openLayoutSetting(self):
@@ -309,31 +431,51 @@ class MainWindow(QMainWindow):
     def changeLayout(self, layoutConfig):
         for videoWidget in self.videoWidgetList:
             videoWidget.mediaPlay(1)  # 全部暂停
-        for _ in self.config['layout']:
+        for index, _ in enumerate(self.config['layout']):
+            # self.videoWidgetList[index].textBrowser.hide()
             self.mainLayout.itemAt(0).widget().hide()
             self.mainLayout.removeWidget(self.mainLayout.itemAt(0).widget())
         for index, layout in enumerate(layoutConfig):
             y, x, h, w = layout
             self.videoWidgetList[index].show()
+            # self.videoWidgetList[index].textBrowser.show()
             self.mainLayout.addWidget(self.videoWidgetList[index], y, x, h, w)
-            self.videoWidgetList[index].mediaPlay(2)  # 显示的窗口播放
+            if self.videoWidgetList[index].roomID != '0':
+                self.videoWidgetList[index].mediaPlay(2)  # 显示的窗口播放
         self.config['layout'] = layoutConfig
         self.dumpConfig.start()
 
     def fullScreen(self):
-        self.maximumToken = self.isMaximized()
-        self.optionMenu.menuAction().setVisible(False)
-        self.versionMenu.menuAction().setVisible(False)
-        if self.controlBarToken:
-            self.controlBar.hide()
+        if self.isFullScreen():  # 退出全屏
+            if self.maximumToken:
+                self.showMaximized()
+            else:
+                self.showNormal()
+            self.optionMenu.menuAction().setVisible(True)
+            self.versionMenu.menuAction().setVisible(True)
+            if self.controlBarToken:
+                self.controlBar.show()
+        else:  # 全屏
+            for videoWidget in self.videoWidgetList:
+                videoWidget.fullScreen = True
+            self.maximumToken = self.isMaximized()
+            self.optionMenu.menuAction().setVisible(False)
+            self.versionMenu.menuAction().setVisible(False)
+            if self.controlBarToken:
+                self.controlBar.hide()
+            for videoWidget in self.videoWidgetList:
+                videoWidget.fullScreen = True
+            self.showFullScreen()
+
+    def muteExcept(self):
         for videoWidget in self.videoWidgetList:
-            videoWidget.fullScreen = True
-        self.showFullScreen()
+            if videoWidget.hoverToken:
+                videoWidget.mediaMute(1)  # 取消静音
+            else:
+                videoWidget.mediaMute(2)  # 静音
 
     def keyPressEvent(self, QEvent):
         if QEvent.key() == Qt.Key_Escape:
-            for videoWidget in self.videoWidgetList:
-                videoWidget.fullScreen = False
             if self.maximumToken:
                 self.showMaximized()
             else:
@@ -357,11 +499,20 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == '__main__':
+    if not os.path.exists('cache'):  # 启动前初始化cache文件夹
+        os.mkdir('cache')
+    try:  # 尝试清除上次缓存 如果失败则跳过
+        for cacheFolder in os.listdir('cache'):
+            shutil.rmtree('cache/%s' % cacheFolder)
+    except:
+        pass
+    cacheFolder = 'cache/%d' % time.time()  # 初始化缓存文件夹
+    os.mkdir(cacheFolder)
     app = QApplication(sys.argv)
     with open('utils/qdark.qss', 'r') as f:
         qss = f.read()
     app.setStyleSheet(qss)
-    mainWindow = MainWindow()
+    mainWindow = MainWindow(cacheFolder)
     mainWindow.showMaximized()
     mainWindow.show()
     sys.exit(app.exec_())

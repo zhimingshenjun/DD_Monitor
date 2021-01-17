@@ -1,5 +1,14 @@
+'''
+DD监控室主界面上方的控制条里的ScrollArea里面的卡片模块
+包含主播开播/下播检测和刷新展示 置顶排序 录制管理等功能
+'''
 import requests, json, time
 from PyQt5.Qt import *
+
+
+header = {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'
+}
 
 
 class OutlinedLabel(QLabel):
@@ -85,6 +94,51 @@ class RequestAPI(QThread):
         self.data.emit(json.loads(r.text))
 
 
+class RecordThread(QThread):
+    downloadTimer = pyqtSignal(str)
+    downloadError = pyqtSignal()
+
+    def __init__(self, roomID):
+        super(RecordThread, self).__init__()
+        self.roomID = roomID
+        self.recordToken = False
+        self.downloadToken = False
+        self.downloadTime = 0  # s
+        self.checkTimer = QTimer()
+        self.checkTimer.timeout.connect(self.checkDownlods)
+
+    def checkDownlods(self):
+        if self.downloadToken:
+            self.downloadToken = False
+            if not self.downloadTime % 60:  # 每分钟刷新一次
+                self.downloadTimer.emit('%dmin' % (self.downloadTime / 60))
+            self.downloadTime += 3
+        else:
+            self.downloadError.emit()
+
+    def setSavePath(self, savePath):
+        self.savePath = savePath
+
+    def run(self):
+        api = r'https://api.live.bilibili.com/room/v1/Room/playUrl?cid=%s&platform=web&qn=10000' % self.roomID
+        r = requests.get(api)
+        try:
+            url = json.loads(r.text)['data']['durl'][0]['url']
+            download = requests.get(url, stream=True, headers=header)
+            self.recordToken = True
+            self.downloadTime = 0  # 初始化下载时间为0s
+            self.cacheVideo = open(self.savePath, 'wb')
+            for chunk in download.iter_content(chunk_size=512):
+                if not self.recordToken:
+                    break
+                if chunk:
+                    self.downloadToken = True
+                    self.cacheVideo.write(chunk)
+            self.cacheVideo.close()
+        except Exception as e:
+            print(str(e))
+
+
 class DownloadImage(QThread):
     img = pyqtSignal(QPixmap)
 
@@ -107,7 +161,7 @@ class DownloadImage(QThread):
 
 class CoverLabel(QLabel):
     addToWindow = pyqtSignal(list)
-    deleteCover = pyqtSignal(int)
+    deleteCover = pyqtSignal(str)
     changeTopToken = pyqtSignal(list)
 
     def __init__(self, roomID, topToken=False):
@@ -115,6 +169,9 @@ class CoverLabel(QLabel):
         self.setAcceptDrops(True)
         self.roomID = roomID
         self.topToken = topToken
+        self.title = 'NA'
+        self.recordState = 0  # 0 无录制任务  1 录制中  2 等待开播录制
+        self.savePath = ''
         self.setFixedSize(160, 90)
         self.setStyleSheet('background-color:#708090')  # 灰色背景
         self.firstUpdateToken = True
@@ -127,7 +184,7 @@ class CoverLabel(QLabel):
             brush = '#FFFFFF'
         self.titleLabel = OutlinedLabel(fontColor=brush)
         self.layout.addWidget(self.titleLabel, 0, 0, 1, 6)
-        self.roomIDLabel = OutlinedLabel(str(roomID), fontColor=brush)
+        self.roomIDLabel = OutlinedLabel(roomID, fontColor=brush)
         self.layout.addWidget(self.roomIDLabel, 1, 0, 1, 6)
         self.stateLabel = OutlinedLabel(size=13)
         self.stateLabel.setText('检测中')
@@ -138,9 +195,13 @@ class CoverLabel(QLabel):
         self.downloadKeyFrame = DownloadImage(160, 90)
         self.downloadKeyFrame.img.connect(self.updateKeyFrame)
 
+        self.recordThread = RecordThread(roomID)
+        self.recordThread.downloadTimer.connect(self.refreshStateLabel)
+
     def updateLabel(self, info):
-        if not info[0]:  # 直播间不存在
+        if not info[0]:  # 用户或直播间不存在
             self.liveState = -1
+            self.roomID = '0'
             self.titleLabel.setText('错误的房号')
             self.stateLabel.setText('无该房间')
             self.setStyleSheet('background-color:#8B3A3A')  # 红色背景
@@ -151,18 +212,33 @@ class CoverLabel(QLabel):
                 self.downloadFace.start()
                 self.roomIDLabel.setText(info[1])  # 房间号
                 self.titleLabel.setText(info[2])  # 名字
+                self.title = info[2]
             if info[4] == 1:  # 直播中
                 self.liveState = 1
-                self.stateLabel.setText('· 直播中')
-                self.stateLabel.setBrush(QColor('#7FFFD4'))
                 self.downloadKeyFrame.setUrl(info[5])  # 启动下载关键帧线程
                 self.downloadKeyFrame.start()
             else:  # 未开播
                 self.liveState = 0
-                self.stateLabel.setText('· 未开播')
-                self.stateLabel.setBrush(QColor('#FF6A6A'))
                 self.clear()
                 self.setStyleSheet('background-color:#708090')  # 灰色背景
+            self.refreshStateLabel()
+
+    def refreshStateLabel(self, downloadTime=''):
+        if self.liveState == 1:
+            if self.recordState == 1:  # 录制中
+                self.stateLabel.setBrush(QColor('#87CEFA'))  # 录制中为蓝色字体
+                if downloadTime:
+                    self.stateLabel.setText('· 录制中 %s' % downloadTime)
+            else:
+                self.stateLabel.setBrush(QColor('#7FFFD4'))  # 直播中为绿色字体
+                self.stateLabel.setText('· 直播中')
+        else:
+            if self.recordState == 2:  # 等待录制
+                self.stateLabel.setBrush(QColor('#FFA500'))  # 待录制为橙色字体
+                self.stateLabel.setText('· 等待开播')
+            else:
+                self.stateLabel.setBrush(QColor('#FF6A6A'))  # 未开播为红色字体
+                self.stateLabel.setText('· 未开播')
 
     def updateProfile(self, img):
         self.profile.set_image(img)
@@ -190,11 +266,18 @@ class CoverLabel(QLabel):
                 top = menu.addAction('添加置顶')
             else:
                 top = menu.addAction('取消置顶')
+            if self.recordState == 0:  # 无录制任务
+                if self.liveState == 1:
+                    record = menu.addAction('录制(最高画质)')
+                elif self.liveState in [0, 2]:  # 未开播或轮播
+                    record = menu.addAction('开播自动录制')
+            else:  # 录制中或等待录制
+                record = menu.addAction('取消录制')
             delete = menu.addAction('删除')
             action = menu.exec_(self.mapToGlobal(QMouseEvent.pos()))
             if action == delete:
                 self.deleteCover.emit(self.roomID)
-                self.roomID = 0
+                self.roomID = '0'
                 self.hide()
             elif action == top:
                 if self.topToken:
@@ -205,6 +288,28 @@ class CoverLabel(QLabel):
                     self.roomIDLabel.setBrush('#FFC125')
                 self.topToken = not self.topToken
                 self.changeTopToken.emit([self.roomID, self.topToken])  # 发送修改后的置顶token
+            elif action == record:
+                if self.roomID != '0':
+                    if self.recordState == 0:  # 无录制任务
+                        saveName = '%s_%s' % (self.title, time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time())))
+                        self.savePath = QFileDialog.getSaveFileName(self, "选择保存路径", saveName, "*.flv")[0]
+                        if self.savePath:  # 保存路径有效
+                            if self.liveState == 1:  # 直播中
+                                self.recordThread.setSavePath(self.savePath)
+                                self.recordThread.start()
+                                self.recordThread.checkTimer.start(3000)
+                                self.recordState = 1  # 改为录制状态
+                                self.refreshStateLabel('0min')
+                            elif self.liveState in [0, 2]:  # 未开播或轮播中
+                                self.recordState = 2  # 改为等待录制状态
+                                self.refreshStateLabel()
+                    elif self.recordState == 1:  # 录制中→取消录制
+                        self.recordState = 0  # 取消录制
+                        self.recordThread.recordToken = False  # 设置录像线程标志位让它自行退出结束
+                        self.refreshStateLabel()
+                    elif self.recordState == 2:  # 等待录制→取消录制
+                        self.recordState = 0  # 取消录制
+                        self.refreshStateLabel()
             else:
                 for index, i in enumerate(addWindow):
                     if action == i:
@@ -353,8 +458,9 @@ class AddLiverRoomWidget(QWidget):
         roomList = []
         for i in tmpList:
             if i.isnumeric():
-                roomList.append(int(i))
+                roomList.append(i)  # 全部统一为字符串格式的roomid
         self.roomList.emit(roomList)
+        self.roomEdit.clear()
         self.hide()
 
     def hotLiverAdd(self, row):
@@ -449,7 +555,6 @@ class LiverPanel(QWidget):
         self.layout.setContentsMargins(2, 2, 2, 2)
         self.coverList = []
         for roomID, topToken in roomIDDict.items():
-            roomID = int(roomID)
             self.coverList.append(CoverLabel(roomID, topToken))
             self.coverList[-1].addToWindow.connect(self.addCoverToPlayer)  # 添加至窗口播放信号
             self.coverList[-1].deleteCover.connect(self.deleteCover)
@@ -473,7 +578,7 @@ class LiverPanel(QWidget):
     def addLiverRoomList(self, roomList):
         newID = []
         for roomID in roomList:  # 如果id不在老列表里面 则添加
-            if len(str(roomID)) <= 4:  # 查询短号
+            if len(roomID) <= 4:  # 查询短号
                 try:
                     r = requests.get('https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=%s' % roomID)
                     data = json.loads(r.text)['data']
@@ -483,12 +588,11 @@ class LiverPanel(QWidget):
             if roomID not in self.roomIDDict:
                 newID.append(roomID)
         for index, roomID in enumerate(newID):  # 添加id并创建新的预览图卡
-            roomID = int(roomID)
-            self.coverList.append(CoverLabel(roomID, False))
+            self.coverList.append(CoverLabel(str(roomID), False))
             self.coverList[-1].addToWindow.connect(self.addCoverToPlayer)  # 添加至播放窗口
             self.coverList[-1].deleteCover.connect(self.deleteCover)
             self.coverList[-1].changeTopToken.connect(self.changeTop)
-            self.roomIDDict[roomID] = False  # 添加普通卡片
+            self.roomIDDict[str(roomID)] = False  # 添加普通卡片 字符串类型
         self.collectLiverInfo.setRoomIDList(list(map(int, self.roomIDDict.keys())))  # 更新需要刷新的房间列表
         self.collectLiverInfo.terminate()
         self.collectLiverInfo.start()
@@ -499,14 +603,20 @@ class LiverPanel(QWidget):
         for index, info in enumerate(liverInfo):
             if info[0]:  # uid有效
                 for cover in self.coverList:
-                    if cover.roomID == int(info[1]):
-                        cover.updateLabel(info)
-                if info[1] not in self.oldLiveStatus:  # 第一次更新添加
+                    if cover.roomID == info[1]:  # 字符串房号
+                        if cover.recordState == 2 and cover.liveState == 0 and info[4] == 1:  # 满足等待开播录制的3个条件
+                            cover.recordThread.setSavePath(cover.savePath)  # 启动录制线程
+                            cover.recordThread.start()
+                            cover.recordThread.checkTimer.start(3000)
+                            cover.recordState = 1  # 改为录制状态
+                        elif cover.recordState == 1 and info[4] != 1:  # 满足停止录制的2个条件
+                            cover.recordState = 0  # 取消录制
+                            cover.recordThread.recordToken = False  # 设置录像线程标志位让它自行退出结束
+                        cover.updateLabel(info)  # 更新数据
+                if info[1] not in self.oldLiveStatus:  # 软件启动后第一次更新添加
                     self.oldLiveStatus[info[1]] = info[4]  # 房号: 直播状态
                 elif self.oldLiveStatus[info[1]] != info[4]:  # 状态发生变化
-                    roomIDToRefresh.append(int(info[1]))  # 发送给主界面要刷新的房间号
-                    # oldStatus = '直播中' if self.oldLiveStatus[info[1]] == 1 else '未开播'
-                    # newStatus = '直播中' if info[4] == 1 else '未开播'
+                    roomIDToRefresh.append(info[1])  # 发送给主界面要刷新的房间号
                     self.oldLiveStatus[info[1]] = info[4]  # 更新旧的直播状态列表
         if roomIDToRefresh:
             self.refreshIDList.emit(roomIDToRefresh)
@@ -534,6 +644,6 @@ class LiverPanel(QWidget):
                         self.layout.addWidget(cover)
         for cover in self.coverList:
             cover.hide()
-            if cover.liveState in [1, 0, -1] and cover.roomID:
+            if cover.liveState in [1, 0, -1] and cover.roomID != '0':
                 cover.show()
         self.adjustSize()

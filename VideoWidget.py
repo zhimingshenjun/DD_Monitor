@@ -20,30 +20,80 @@ class Bar(QLabel):
         self.moveSignal.emit(event.pos() - self.startPos)
 
 
+class ToolButton(QToolButton):
+    def __init__(self, icon):
+        super(ToolButton, self).__init__()
+        self.setStyleSheet('border-color:#CCCCCC')
+        self.setFixedSize(25, 25)
+        self.setIcon(icon)
+
+
+class TextOpation(QWidget):
+    def __init__(self, setting=[20, 2, 6, 0, '【 [ {']):
+        super(TextOpation, self).__init__()
+        self.resize(300, 300)
+        self.setWindowTitle('弹幕窗设置')
+        self.setWindowFlag(Qt.WindowStaysOnTopHint)
+        layout = QGridLayout(self)
+        layout.addWidget(QLabel('窗体透明度'), 0, 0, 1, 1)
+        self.opacitySlider = Slider()
+        self.opacitySlider.setValue(setting[0])
+        layout.addWidget(self.opacitySlider, 0, 1, 1, 1)
+        layout.addWidget(QLabel('窗体横向占比'), 1, 0, 1, 1)
+        self.horizontalCombobox = QComboBox()
+        self.horizontalCombobox.addItems(['10%', '15%', '20%', '25%', '30%', '35%', '40%', '45%', '50%'])
+        self.horizontalCombobox.setCurrentIndex(setting[1])
+        layout.addWidget(self.horizontalCombobox, 1, 1, 1, 1)
+        layout.addWidget(QLabel('窗体纵向占比'), 2, 0, 1, 1)
+        self.verticalCombobox = QComboBox()
+        self.verticalCombobox.addItems(['50%', '55%', '60%', '65%', '70%', '75%', '80%', '85%', '90%', '95%', '100%'])
+        self.verticalCombobox.setCurrentIndex(setting[2])
+        layout.addWidget(self.verticalCombobox, 2, 1, 1, 1)
+        layout.addWidget(QLabel('单独同传窗口'), 3, 0, 1, 1)
+        self.translateCombobox = QComboBox()
+        self.translateCombobox.addItems(['开启', '关闭'])
+        self.translateCombobox.setCurrentIndex(setting[3])
+        layout.addWidget(self.translateCombobox, 3, 1, 1, 1)
+        layout.addWidget(QLabel('同传过滤字符 (空格隔开)'), 4, 0, 1, 1)
+        self.translateFitler = QLineEdit('')
+        self.translateFitler.setText(setting[4])
+        self.translateFitler.setFixedWidth(100)
+        layout.addWidget(self.translateFitler, 4, 1, 1, 1)
+
+
 class TextBrowser(QWidget):
     closeSignal = pyqtSignal()
 
-    def __init__(self, parent, id, title='弹幕'):
+    def __init__(self, parent, id):
         super(TextBrowser, self).__init__(parent)
+        self.optionWidget = TextOpation()
+
         layout = QGridLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        self.bar = Bar(' 窗口%s %s' % (id + 1, title))
+        self.bar = Bar(' 窗口%s 弹幕' % (id + 1))
         self.bar.setStyleSheet('background:#AAAAAAAA')
         self.bar.moveSignal.connect(self.moveWindow)
         layout.addWidget(self.bar, 0, 0, 1, 10)
 
-        self.closeButton = QToolButton()
-        self.closeButton.setStyleSheet('border-color:#CCCCCC')
-        self.closeButton.setFixedSize(25, 25)
-        self.closeButton.setIcon(self.style().standardIcon(QStyle.SP_DockWidgetCloseButton))
+        self.optionButton = ToolButton(self.style().standardIcon(QStyle.SP_FileDialogDetailedView))
+        self.optionButton.clicked.connect(self.optionWidget.show)  # 弹出设置菜单
+        layout.addWidget(self.optionButton, 0, 8, 1, 1)
+
+        self.closeButton = ToolButton(self.style().standardIcon(QStyle.SP_TitleBarCloseButton))
         self.closeButton.clicked.connect(self.userClose)
         layout.addWidget(self.closeButton, 0, 9, 1, 1)
 
         self.textBrowser = QTextBrowser()
         self.textBrowser.setFont(QFont('Microsoft JhengHei', 16, QFont.Bold))
-        self.textBrowser.setStyleSheet('background:#66000000;border-width:1')
+        self.textBrowser.setStyleSheet('border-width:1')
         layout.addWidget(self.textBrowser, 1, 0, 1, 10)
+
+        self.transBrowser = QTextBrowser()
+        self.transBrowser.setFont(QFont('Microsoft JhengHei', 16, QFont.Bold))
+        self.transBrowser.setStyleSheet('border-width:1')
+        # self.transBrowser.setFixedHeight(self.height() / 3)
+        layout.addWidget(self.transBrowser, 2, 0, 1, 10)
 
     def userClose(self):
         self.hide()
@@ -138,6 +188,7 @@ class GetMediaURL(QThread):
         api = r'https://api.live.bilibili.com/room/v1/Room/playUrl?cid=%s&platform=web&qn=%s' % (self.roomID, self.quality)
         r = requests.get(api)
         try:
+            # print(json.loads(r.text)['data']['durl'][0]['url'])
             self.url.emit(QMediaContent(QUrl(json.loads(r.text)['data']['durl'][0]['url'])))
         except Exception as e:
             print(str(e))
@@ -154,7 +205,7 @@ class VideoWidget(QWidget):
     changeQuality = pyqtSignal(list)  # 修改画质
     popWindow = pyqtSignal(list)  # 弹出悬浮窗
 
-    def __init__(self, id, top=False, title='', resize=[]):
+    def __init__(self, id, top=False, title='', resize=[], textSetting=[True, 20, 2, 6, 0, '【 [ {']):
         super(VideoWidget, self).__init__()
         self.id = id
         self.roomID = 0
@@ -164,6 +215,10 @@ class VideoWidget(QWidget):
         self.rightButtonPress = False
         self.fullScreen = False
         self.top = top
+        self.textSetting = textSetting
+        self.horiPercent = [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5][self.textSetting[2]]
+        self.vertPercent = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1][self.textSetting[3]]
+        self.filters = textSetting[5].split(' ')
         self.opacity = 100
         if top:
             self.setWindowFlag(Qt.WindowStaysOnTopHint)
@@ -238,11 +293,26 @@ class VideoWidget(QWidget):
         self.getMediaURL = GetMediaURL()
         self.getMediaURL.url.connect(self.setMedia)
 
-        self.textBrowser = TextBrowser(self, self.id, '弹幕')
+        self.textBrowser = TextBrowser(self, self.id)
+        self.setDanmuOpacity(self.textSetting[1])  # 设置弹幕透明度
+        self.textBrowser.optionWidget.opacitySlider.setValue(self.textSetting[1])  # 设置选项页透明条
+        self.textBrowser.optionWidget.opacitySlider.value.connect(self.setDanmuOpacity)
+        self.setHorizontalPercent(self.textSetting[2])  # 设置横向占比
+        self.textBrowser.optionWidget.horizontalCombobox.setCurrentIndex(self.textSetting[2])  # 设置选项页占比框
+        self.textBrowser.optionWidget.horizontalCombobox.currentIndexChanged.connect(self.setHorizontalPercent)
+        self.setVerticalPercent(self.textSetting[3])  # 设置横向占比
+        self.textBrowser.optionWidget.verticalCombobox.setCurrentIndex(self.textSetting[3])  # 设置选项页占比框
+        self.textBrowser.optionWidget.verticalCombobox.currentIndexChanged.connect(self.setVerticalPercent)
+        self.setTranslateBrowser(self.textSetting[4])
+        self.textBrowser.optionWidget.translateCombobox.setCurrentIndex(self.textSetting[4])  # 设置同传窗口
+        self.textBrowser.optionWidget.translateCombobox.currentIndexChanged.connect(self.setTranslateBrowser)
+        self.setTranslateFilter(self.textSetting[5])  # 同传过滤字符
+        self.textBrowser.optionWidget.translateFitler.setText(self.textSetting[5])
+        self.textBrowser.optionWidget.translateFitler.textChanged.connect(self.setTranslateFilter)
         self.textBrowser.closeSignal.connect(self.closeDanmu)
 
-        self.translator = TextBrowser(self, self.id, '同传')
-        self.translator.closeSignal.connect(self.closeTranslator)
+        # self.translator = TextBrowser(self, self.id, '同传')
+        # self.translator.closeSignal.connect(self.closeTranslator)
 
         self.danmu = remoteThread(self.roomID)
 
@@ -251,6 +321,52 @@ class VideoWidget(QWidget):
 
         self.fullScreenTimer = QTimer()
         self.fullScreenTimer.timeout.connect(self.hideFrame)
+
+    def setDanmuOpacity(self, value):
+        if value < 7: value = 7  # 最小透明度
+        self.textSetting[1] = value  # 记录设置
+        value = int(value / 101 * 256)
+        color = str(hex(value))[2:] + '000000'
+        self.textBrowser.textBrowser.setStyleSheet('background-color:#%s' % color)
+        self.textBrowser.transBrowser.setStyleSheet('background-color:#%s' % color)
+
+    def setHorizontalPercent(self, index):  # 设置弹幕框水平宽度
+        self.textSetting[2] = index
+        self.horiPercent = [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5][index]  # 记录横向占比
+        width = self.width() * self.horiPercent
+        self.textBrowser.resize(width, self.textBrowser.height())
+        if width > 300:
+            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 20, QFont.Bold))
+            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 20, QFont.Bold))
+        elif 100 < width <= 300:
+            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 5, QFont.Bold))
+            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 5, QFont.Bold))
+        else:
+            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 10, QFont.Bold))
+            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 10, QFont.Bold))
+        self.textBrowser.textBrowser.verticalScrollBar().setValue(100000000)
+        self.textBrowser.transBrowser.verticalScrollBar().setValue(100000000)
+
+    def setVerticalPercent(self, index):  # 设置弹幕框垂直高度
+        self.textSetting[3] = index
+        self.vertPercent = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1][index]  # 记录纵向占比
+        self.textBrowser.resize(self.textBrowser.width(), self.height() * self.vertPercent)
+        self.textBrowser.textBrowser.verticalScrollBar().setValue(100000000)
+        self.textBrowser.transBrowser.verticalScrollBar().setValue(100000000)
+
+    def setTranslateBrowser(self, index):
+        self.textSetting[4] = index
+        # if not index:
+        #     self.textBrowser.transBrowser.setFixedHeight(self.textBrowser.height() / 3)
+        # else:
+        #     print(1)
+        #     self.textBrowser.transBrowser.setFixedHeight(0)
+        self.textBrowser.transBrowser.show() if not index else self.textBrowser.transBrowser.hide()  # 显示/隐藏同传
+        self.textBrowser.adjustSize()
+        self.resize(self.width() * self.horiPercent, self.height() * self.vertPercent)
+
+    def setTranslateFilter(self, filterWords):
+        self.filters = filterWords.split(' ')
 
     def enterEvent(self, QEvent):
         self.topLabel.show()
@@ -291,15 +407,15 @@ class VideoWidget(QWidget):
             self.addMedia.emit([self.id, self.roomID])
             self.mediaReload()
             self.textBrowser.textBrowser.clear()
-            self.translator.textBrowser.clear()
+            self.textBrowser.transBrowser.clear()
         elif 'exchange' in text: # 交换窗口
             fromID, fromRoomID = map(int, text.split(':')[1:])
             if fromID != self.id:
                 self.exchangeMedia.emit([self.id, fromRoomID, fromID, self.roomID])
                 self.roomID = fromRoomID
                 self.mediaReload()
-                self.textBrowser.textBrowser.clear()
-                self.translator.textBrowser.clear()
+                # self.textBrowser.textBrowser.clear()
+                # self.translator.textBrowser.clear()
 
     def rightMouseClicked(self, event):
         menu = QMenu()
@@ -379,22 +495,22 @@ class VideoWidget(QWidget):
 
     def resizeEvent(self, QEvent):
         self.scene.setSceneRect(1, 1, self.width() - 2, self.height() - 2)
-        width = self.width() * 0.2
-        self.textBrowser.resize(width, self.height() * 0.6)
-        self.translator.resize(width, self.height() * 0.4)
-        if width > 200:
-            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 15, QFont.Bold))
-            self.translator.textBrowser.setFont(QFont('Microsoft JhengHei', 15, QFont.Bold))
-        elif 100 < width <= 200:
+        width = self.width() * self.horiPercent
+        self.textBrowser.resize(width, self.height() * self.vertPercent)
+        if width > 300:
+            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 20, QFont.Bold))
+            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 20, QFont.Bold))
+        elif 100 < width <= 300:
             self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 5, QFont.Bold))
-            self.translator.textBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 5, QFont.Bold))
+            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 5, QFont.Bold))
         else:
             self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 10, QFont.Bold))
-            self.translator.textBrowser.setFont(QFont('Microsoft JhengHei', 10, QFont.Bold))
+            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 10, QFont.Bold))
+        # if not self.textBrowser.transBrowser.isHidden():
+        #     self.textBrowser.transBrowser.setFixedHeight(self.textBrowser.height() / 3)
         self.textBrowser.move(0, 0)
-        self.translator.move(0, self.textBrowser.height())
         self.textBrowser.textBrowser.verticalScrollBar().setValue(100000000)
-        self.translator.textBrowser.verticalScrollBar().setValue(100000000)
+        self.textBrowser.transBrowser.verticalScrollBar().setValue(100000000)
         self.resizeTimer.start(50)  # 延迟50ms修改video窗口 否则容易崩溃
 
     def resizeVideoItem(self):
@@ -406,20 +522,22 @@ class VideoWidget(QWidget):
         self.volumeChanged.emit([self.id, value])
 
     def closeDanmu(self):
-        self.setDanmu.emit([self.id, False])
+        self.textSetting[0] = False
+        # self.setDanmu.emit([self.id, False])  # 旧版信号 已弃用
 
     def closeTranslator(self):
         self.setTranslator.emit([self.id, False])
 
     def showDanmu(self):
-        if self.textBrowser.isHidden() or self.translator.isHidden():
+        if self.textBrowser.isHidden():
             self.textBrowser.show()
-            self.translator.show()
+            # self.translator.show()
         else:
             self.textBrowser.hide()
-            self.translator.hide()
-        self.setDanmu.emit([self.id, not self.textBrowser.isHidden()])
-        self.setTranslator.emit([self.id, not self.translator.isHidden()])
+            # self.translator.hide()
+        self.textSetting[0] = not self.textBrowser.isHidden()
+        # self.setDanmu.emit([self.id, not self.textBrowser.isHidden()])
+        # self.setTranslator.emit([self.id, not self.translator.isHidden()])
 
     def mediaPlay(self, force=0):
         if force == 1:
@@ -514,11 +632,14 @@ class VideoWidget(QWidget):
         self.titleLabel.setText(uname)
 
     def playDanmu(self, message):
-        token = False
-        for symbol in ['【', '[', '{']:
-            if symbol in message:
-                self.translator.textBrowser.append(message)
-                token = True
-                break
-        if not token:
+        if self.textBrowser.transBrowser.isHidden():
             self.textBrowser.textBrowser.append(message)
+        else:
+            token = False
+            for symbol in self.filters:
+                if symbol in message:
+                    self.textBrowser.transBrowser.append(message)
+                    token = True
+                    break
+            if not token:
+                self.textBrowser.textBrowser.append(message)

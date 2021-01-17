@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+'''
+通过QThread + websocket获取直播弹幕并返回给播放窗口模块做展示
+'''
 import asyncio
 import zlib
 import json
@@ -12,7 +15,7 @@ class remoteThread(QThread):
 
     def __init__(self, roomID):
         super(remoteThread, self).__init__()
-        self.roomID = str(roomID)
+        self.roomID = roomID
         if len(self.roomID) <= 3:
             headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 \
 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 QIHU 360SE'}

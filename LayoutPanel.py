@@ -1,4 +1,8 @@
+'''
+选择布局方式的页面
+'''
 from PyQt5.Qt import *
+from LayoutConfig import layoutList
 
 
 class Label(QLabel):
@@ -41,22 +45,13 @@ class LayoutSettingPanel(QWidget):
         mainLayout = QGridLayout(self)
         mainLayout.setSpacing(15)
         mainLayout.setContentsMargins(15, 15, 15, 15)
-        self.layoutList = [
-            [(0, 0, 1, 1)], [(0, 0, 1, 1), (0, 1, 1, 1)], [(0, 0, 1, 1), (1, 0, 1, 1), (2, 0, 1, 1)],
-            [(0, 0, 1, 1), (0, 1, 1, 1), (1, 0, 1, 1), (1, 1, 1, 1)],
-            [(0, 0, 1, 1), (0, 1, 1, 1), (0, 2, 1, 1), (1, 0, 1, 1), (1, 1, 1, 1), (1, 2, 1, 1)],
-            [(0, 0, 2, 2), (0, 2, 1, 1), (1, 2, 1, 1), (2, 0, 1, 1), (2, 1, 1, 1), (2, 2, 1, 1)],
-            [(0, 0, 1, 1), (0, 1, 1, 1), (0, 2, 1, 1), (0, 3, 1, 1), (1, 0, 1, 1), (1, 1, 1, 1), (1, 2, 1, 1), (1, 3, 1, 1)],
-            [(0, 0, 3, 3), (0, 3, 1, 1), (1, 3, 1, 1), (2, 3, 1, 1), (3, 0, 1, 1), (3, 1, 1, 1), (3, 2, 1, 1), (3, 3, 1, 1)],
-            [(0, 0, 1, 1), (0, 1, 1, 1), (0, 2, 1, 1), (1, 0, 1, 1), (1, 1, 1, 1), (1, 2, 1, 1), (2, 0, 1, 1), (2, 1, 1, 1), (2, 2, 1, 1)]
-        ]
         layoutWidgetList = []
-        for index, layout in enumerate(self.layoutList):
+        for index, layout in enumerate(layoutList):
             widget = LayoutWidget(layout, index)
             widget.clicked.connect(self.sendLayout)
-            mainLayout.addWidget(widget, index // 3, index % 3)
+            mainLayout.addWidget(widget, index // 4, index % 4)
             layoutWidgetList.append(widget)
 
     def sendLayout(self, number):
-        self.layoutConfig.emit(self.layoutList[number])
+        self.layoutConfig.emit(layoutList[number])
         self.hide()
