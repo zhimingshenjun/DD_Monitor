@@ -516,7 +516,7 @@ class LiverPanel(QWidget):
         self.addToWindow.emit(info)
 
     def deleteCover(self, roomID):
-        del self.roomIDDict[roomID]  # 删除roomID
+        del self.roomIDDict[str(roomID)]  # 删除roomID
         self.collectLiverInfo.setRoomIDList(list(map(int, self.roomIDDict.keys())))  # 更新需要刷新的房间列表
         self.refreshPanel()
         self.dumpConfig.emit()  # 发送保存config信号
