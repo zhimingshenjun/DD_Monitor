@@ -668,7 +668,6 @@ class VideoWidget(QWidget):
         self.danmu.terminate()
         self.danmu.start()
         self.media = self.instance.media_new(cacheName, 'avcodec-hw=dxva2')  # 设置vlc并硬解播放
-        # self.media.add_options(*['avcodec-hw=any'])
         self.player.set_media(self.media)  # 设置视频
         self.player.play()
 

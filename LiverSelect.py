@@ -454,7 +454,7 @@ class AddLiverRoomWidget(QWidget):
                     pass
 
     def sendSelectedRoom(self):
-        tmpList = self.roomEdit.text().split(' ')
+        tmpList = self.roomEdit.text().strip().replace('\t', ' ').split(' ')
         roomList = []
         for i in tmpList:
             if i.isnumeric():
