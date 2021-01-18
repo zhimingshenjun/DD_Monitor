@@ -117,8 +117,6 @@ class MainWindow(QMainWindow):
         for i in range(9):
             volume = self.config['volume'][i]
             self.videoWidgetList.append(VideoWidget(i, volume, cacheFolder, textSetting=self.config['danmu'][i]))
-            # self.videoWidgetList[i].show()
-            # self.videoWidgetList[i].hide()
             self.videoWidgetList[i].mutedChanged.connect(self.mutedChanged)
             self.videoWidgetList[i].volumeChanged.connect(self.volumeChanged)
             self.videoWidgetList[i].addMedia.connect(self.addMedia)
@@ -134,12 +132,7 @@ class MainWindow(QMainWindow):
             self.videoWidgetList[i].mediaMute(self.config['muted'][i], emit=False)
             self.videoWidgetList[i].slider.setValue(self.config['volume'][i])
             self.videoWidgetList[i].quality = self.config['quality'][i]
-            if self.config['danmu'][i][0]:  # 显示弹幕窗
-                self.videoWidgetList[i].textBrowser.show()
-            else:
-                self.videoWidgetList[i].textBrowser.hide()
             self.popVideoWidgetList.append(VideoWidget(i + 9, volume, cacheFolder, True, '悬浮窗', [1280, 720]))
-            # self.popVideoWidgetList[i].textBrowser.hide()
         self.setPlayer()
 
         self.controlBar = QToolBar()
@@ -270,9 +263,7 @@ class MainWindow(QMainWindow):
         self.dumpConfig.start()
         self.changeLayout(self.config['layout'])  # 刷新layout
 
-    def setDanmu(self, info):
-        id, token = info  # 窗口 弹幕显示布尔值
-        self.config['danmu'][id] = token
+    def setDanmu(self):
         self.dumpConfig.start()
 
     def setTranslator(self, info):
@@ -376,23 +367,6 @@ class MainWindow(QMainWindow):
     def checkMousePos(self):
         for videoWidget in self.videoWidgetList:  # vlc的播放会直接音量最大化 实在没地方放了 写在这里实时强制修改它的音量
             videoWidget.player.audio_set_volume(videoWidget.volume)
-            # if not videoWidget.isHidden():
-            #     videoPos = self.mapToGlobal(videoWidget.pos())
-            #     videoX, videoY = videoPos.x(), videoPos.y() + 135
-            #     videoW, videoH = videoWidget.width(), videoWidget.height()
-            #     textX, textY = videoWidget.textBrowser.pos().x(), videoWidget.textBrowser.pos().y()
-            #     textW, textH = videoWidget.textBrowser.width(), videoWidget.textBrowser.height()
-            #     moveToken = False
-            #     if textH > videoH:
-            #         textX, textY = videoX, videoY
-            #         moveToken = True
-            #     else:
-            #         if textX < videoX: textX = videoX; moveToken = True
-            #         elif textX > videoX + videoW - textW: textX = videoX + videoW - textW; moveToken = True
-            #         if textY < videoY: textY = videoY; moveToken = True
-            #         elif textY > videoY + videoH - textH: textY = videoY + videoH - textH; moveToken = True
-            #     if moveToken:
-            #         videoWidget.textBrowser.move(textX, textY)
         newMousePos = QCursor.pos()
         if newMousePos != self.oldMousePos:
             self.setCursor(Qt.ArrowCursor)  # 鼠标动起来就显示
@@ -408,6 +382,22 @@ class MainWindow(QMainWindow):
             for videoWidget in self.popVideoWidgetList:
                 videoWidget.topLabel.hide()  # 隐藏悬浮窗口的控制条
                 videoWidget.frame.hide()
+
+    def moveEvent(self, QMoveEvent):  # 捕获主窗口moveEvent来实时同步弹幕机位置
+        for videoWidget in self.videoWidgetList:
+            videoWidget.moveTextBrowser()
+
+    def changeEvent(self, QEvent):  # 当用户最小化界面的时候把弹幕机也隐藏了
+        try:
+            if self.isMinimized():
+                for videoWidget in self.videoWidgetList:
+                    videoWidget.textBrowser.hide()
+            else:
+                for index, videoWidget in enumerate(self.videoWidgetList):
+                    if self.config['danmu'][index][0] and not videoWidget.isHidden():  # 显示弹幕机
+                        videoWidget.textBrowser.show()
+        except:
+            pass
 
     def closeEvent(self, QCloseEvent):
         self.hide()
@@ -432,13 +422,13 @@ class MainWindow(QMainWindow):
         for videoWidget in self.videoWidgetList:
             videoWidget.mediaPlay(1)  # 全部暂停
         for index, _ in enumerate(self.config['layout']):
-            # self.videoWidgetList[index].textBrowser.hide()
+            self.videoWidgetList[index].textBrowser.hide()
             self.mainLayout.itemAt(0).widget().hide()
             self.mainLayout.removeWidget(self.mainLayout.itemAt(0).widget())
         for index, layout in enumerate(layoutConfig):
             y, x, h, w = layout
             self.videoWidgetList[index].show()
-            # self.videoWidgetList[index].textBrowser.show()
+            self.videoWidgetList[index].textBrowser.show()
             self.mainLayout.addWidget(self.videoWidgetList[index], y, x, h, w)
             if self.videoWidgetList[index].roomID != '0':
                 self.videoWidgetList[index].mediaPlay(2)  # 显示的窗口播放
