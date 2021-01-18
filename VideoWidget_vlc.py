@@ -553,14 +553,14 @@ class VideoWidget(QWidget):
         width = self.width() * self.horiPercent
         self.textBrowser.resize(width, self.height() * self.vertPercent)
         if width > 300:
-            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 20, QFont.Bold))
-            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 20, QFont.Bold))
-        elif 100 < width <= 300:
-            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 5, QFont.Bold))
-            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 5, QFont.Bold))
+            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 16, QFont.Bold))
+            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 16, QFont.Bold))
+        elif 240 < width <= 300:
+            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 1, QFont.Bold))
+            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 1, QFont.Bold))
         else:
-            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 10, QFont.Bold))
-            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 10, QFont.Bold))
+            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 12, QFont.Bold))
+            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 12, QFont.Bold))
         # if not self.textBrowser.transBrowser.isHidden():
         #     self.textBrowser.transBrowser.setFixedHeight(self.textBrowser.height() / 3)
 
@@ -696,16 +696,16 @@ class VideoWidget(QWidget):
 
     def playDanmu(self, message):
         if self.textBrowser.transBrowser.isHidden():
-            self.textBrowser.textBrowser.append(message)
+            self.textBrowser.textBrowser.append(message + '\n')
         else:
             token = False
             for symbol in self.filters:
                 if symbol in message:
-                    self.textBrowser.transBrowser.append(message)
+                    self.textBrowser.transBrowser.append(message)  # 同传不换行
                     token = True
                     break
             if not token:
-                self.textBrowser.textBrowser.append(message)
+                self.textBrowser.textBrowser.append(message + '\n')
 
     def keyPressEvent(self, QKeyEvent):
         if QKeyEvent.key() == Qt.Key_Escape:

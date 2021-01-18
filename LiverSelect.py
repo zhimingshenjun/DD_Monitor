@@ -2,7 +2,7 @@
 DD监控室主界面上方的控制条里的ScrollArea里面的卡片模块
 包含主播开播/下播检测和刷新展示 置顶排序 录制管理等功能
 '''
-import requests, json, time
+import requests, json, time, codecs
 from PyQt5.Qt import *
 
 
@@ -378,7 +378,7 @@ class AddLiverRoomWidget(QWidget):
     def __init__(self):
         super(AddLiverRoomWidget, self).__init__()
         self.resize(600, 900)
-        self.setWindowTitle('添加直播间')
+        self.setWindowTitle('添加直播间（房号太多的话尽量分批次添加 避免卡死）')
         self.hotLiverList = []
         self.followLiverList = []
         layout = QGridLayout(self)
@@ -404,7 +404,7 @@ class AddLiverRoomWidget(QWidget):
         self.hotLiverTable.setColumnCount(3)
         self.hotLiverTable.setRowCount(100)
         self.hotLiverTable.setVerticalHeaderLabels(['添加'] * 100)
-        self.hotLiverTable.setHorizontalHeaderLabels(['热门主播', '直播间标题', '直播间房号'])
+        self.hotLiverTable.setHorizontalHeaderLabels(['主播名', '直播间标题', '直播间房号'])
         self.hotLiverTable.setColumnWidth(0, 130)
         self.hotLiverTable.setColumnWidth(1, 240)
         self.hotLiverTable.setColumnWidth(2, 130)
@@ -432,7 +432,7 @@ class AddLiverRoomWidget(QWidget):
         self.followsTable.setColumnCount(3)
         self.followsTable.setRowCount(100)
         self.followsTable.setVerticalHeaderLabels(['添加'] * 100)
-        self.followsTable.setHorizontalHeaderLabels(['热门主播', '直播间标题', '直播间房号'])
+        self.followsTable.setHorizontalHeaderLabels(['主播名', '直播间标题', '直播间房号'])
         self.followsTable.setColumnWidth(0, 130)
         self.followsTable.setColumnWidth(1, 240)
         self.followsTable.setColumnWidth(2, 130)
@@ -440,7 +440,39 @@ class AddLiverRoomWidget(QWidget):
         self.getFollows = GetFollows()
         self.getFollows.roomInfoSummary.connect(self.collectFollowLiverInfo)
 
-        tab.addTab(hotLiverPage, '热门主播')
+        hacoPage = QWidget()  # 添加内置的vtb列表
+        hacoLayout = QGridLayout(hacoPage)
+        hacoLayout.setContentsMargins(1, 1, 1, 1)
+        self.hacoTable = QTableWidget()
+        self.hacoTable.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.hacoTable.verticalScrollBar().installEventFilter(self)
+        self.hacoTable.verticalHeader().sectionClicked.connect(self.hacoAdd)
+        self.hacoTable.setColumnCount(3)
+        try:
+            self.vtbList = []
+            vtbs = codecs.open('utils/vtb.csv', 'r', 'utf_8')
+            for line in vtbs:
+                line = line.strip()
+                if line:
+                    self.vtbList.append(line.split(','))
+                else:
+                    self.vtbList.append(['', '', ''])
+            vtbs.close()
+            self.hacoTable.setRowCount(len(self.vtbList))
+            self.hacoTable.setVerticalHeaderLabels(['添加'] * len(self.vtbList))
+            for y, line in enumerate(self.vtbList):
+                for x in range(3):
+                    self.hacoTable.setItem(y, x, QTableWidgetItem(line[x]))
+        except Exception as e:
+            print(str(e))
+        self.hacoTable.setHorizontalHeaderLabels(['主播名', '直播间房号', '所属'])
+        self.hacoTable.setColumnWidth(0, 130)
+        self.hacoTable.setColumnWidth(1, 130)
+        self.hacoTable.setColumnWidth(2, 200)
+        hacoLayout.addWidget(self.hacoTable)
+
+        tab.addTab(hotLiverPage, '正在直播')
+        tab.addTab(hacoPage, '个人势/箱')
         tab.addTab(followsPage, '关注添加')
 
     def collectHotLiverInfo(self, info):
@@ -470,6 +502,17 @@ class AddLiverRoomWidget(QWidget):
             if roomID not in addedRoomID:
                 addedRoomID += ' %s' % roomID
                 self.roomEdit.setText(addedRoomID)
+        except:
+            pass
+
+    def hacoAdd(self, row):
+        try:
+            roomID = self.vtbList[row][1]
+            if roomID:
+                addedRoomID = self.roomEdit.text()
+                if roomID not in addedRoomID:
+                    addedRoomID += ' %s' % roomID
+                    self.roomEdit.setText(addedRoomID)
         except:
             pass
 
