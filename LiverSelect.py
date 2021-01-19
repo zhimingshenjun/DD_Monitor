@@ -222,7 +222,10 @@ class CoverLabel(QLabel):
             else:  # 未开播
                 self.liveState = 0
                 self.clear()
-                self.setStyleSheet('background-color:#708090')  # 灰色背景
+                if self.topToken:
+                    self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#FFC125;background-color:#708090}')
+                else:
+                    self.setStyleSheet('background-color:#708090')  # 灰色背景
             self.refreshStateLabel()
 
     def refreshStateLabel(self, downloadTime=''):
@@ -289,7 +292,7 @@ class CoverLabel(QLabel):
                 else:
                     self.titleLabel.setBrush('#FFC125')
                     self.roomIDLabel.setBrush('#FFC125')
-                    self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#FFC125}')
+                    self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#FFC125;background-color:#708090}')
                 self.topToken = not self.topToken
                 self.changeTopToken.emit([self.roomID, self.topToken])  # 发送修改后的置顶token
             elif action == record:
