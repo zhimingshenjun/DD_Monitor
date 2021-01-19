@@ -35,7 +35,7 @@ class Version(QWidget):
         self.resize(350, 150)
         self.setWindowTitle('当前版本')
         layout = QGridLayout(self)
-        layout.addWidget(QLabel('DD监控室 v0.1测试版（vlc内核）'), 0, 0, 1, 2)
+        layout.addWidget(QLabel('DD监控室 v0.11测试版'), 0, 0, 1, 2)
         layout.addWidget(QLabel('by 神君Channel'), 1, 0, 1, 1)
         releases_url = QLabel('')
         releases_url.setOpenExternalLinks(True)
@@ -83,6 +83,8 @@ class MainWindow(QMainWindow):
                     self.config['roomid'][roomID] = False
             if 'quality' not in self.config:
                 self.config['quality'] = [80] * 9
+            if 'audioChannel' not in self.config:
+                self.config['audioChannel'] = [0] * 9
             if 'translator' not in self.config:
                 self.config['translator'] = [True] * 9
             for index, textSetting in enumerate(self.config['danmu']):
@@ -90,14 +92,20 @@ class MainWindow(QMainWindow):
                     self.config['danmu'][index] = [textSetting, 20, 2, 6, 0, '【 [ {']
         else:
             self.config = {
-                'roomid': {'21463219': False, '21501730': False, '21096962': False, '21449068': False},  # 置顶显示
+                'roomid': {'21396545': False, '21402309': False, '22384516': False, '8792912': False,
+                           '21696950': False, '14327465': False, '704808': True, '1321846': False,
+                           '56237': False, '8725120': False, '22347054': False, '14052636': False,
+                           '21320551': False, '876396': False, '21448649': False, '24393': False,
+                           '12845193': False, '41682': False, '21652717': False, '22571958': False,
+                           '21919321': True, '21013446': False},  # 置顶显示
                 'layout': [(0, 0, 1, 1), (0, 1, 1, 1), (1, 0, 1, 1), (1, 1, 1, 1)],
-                'player': ['21463219', '21501730', '21096962', '21449068', '0', '0', '0', '0', '0'],
+                'player': ['21396545', '21402309', '22384516', '8792912',
+                           '21696950', '14327465', '704808', '1321846', '318'],
                 'quality': [80] * 9,
+                'audioChannel': [0] * 9,
                 'muted': [1] * 9,
                 'volume': [50] * 9,
                 'danmu': [[True, 20, 2, 6, 0, '【 [ {']] * 9,  # 显示弹幕, 透明度, 横向占比, 纵向占比, 显示同传, 同传过滤字符
-                # 'translator': [True] * 9,
                 'globalVolume': 30,
                 'control': True,
             }
@@ -125,6 +133,7 @@ class MainWindow(QMainWindow):
             self.videoWidgetList[i].setDanmu.connect(self.setDanmu)
             self.videoWidgetList[i].setTranslator.connect(self.setTranslator)
             self.videoWidgetList[i].changeQuality.connect(self.setQuality)
+            self.videoWidgetList[i].changeAudioChannel.connect(self.setAudioChannel)
             self.videoWidgetList[i].popWindow.connect(self.popWindow)
             self.videoWidgetList[i].hideBarKey.connect(self.openControlPanel)
             self.videoWidgetList[i].fullScreenKey.connect(self.fullScreen)
@@ -132,6 +141,7 @@ class MainWindow(QMainWindow):
             self.videoWidgetList[i].mediaMute(self.config['muted'][i], emit=False)
             self.videoWidgetList[i].slider.setValue(self.config['volume'][i])
             self.videoWidgetList[i].quality = self.config['quality'][i]
+            self.videoWidgetList[i].audioChannel = self.config['audioChannel'][i]
             self.popVideoWidgetList.append(VideoWidget(i + 9, volume, cacheFolder, True, '悬浮窗', [1280, 720]))
         self.setPlayer()
 
@@ -191,6 +201,11 @@ class MainWindow(QMainWindow):
         globalQualityMenu.addAction(highQualityAction)
         lowQualityAction = QAction('流畅', self, triggered=lambda: self.globalQuality(80))
         globalQualityMenu.addAction(lowQualityAction)
+        globalAudioMenu = self.optionMenu.addMenu('全局音效')
+        audioOriginAction = QAction('原始音效', self, triggered=lambda: self.globalAudioChannel(0))
+        globalAudioMenu.addAction(audioOriginAction)
+        audioDolbysAction = QAction('杜比音效', self, triggered=lambda: self.globalAudioChannel(5))
+        globalAudioMenu.addAction(audioDolbysAction)
         controlPanelAction = QAction('显示 / 隐藏控制条(H)', self, triggered=self.openControlPanel)
         self.optionMenu.addAction(controlPanelAction)
         self.fullScreenAction = QAction('全屏(F) / 退出(Esc)', self, triggered=self.fullScreen)
@@ -276,12 +291,18 @@ class MainWindow(QMainWindow):
         self.config['quality'][id] = quality
         self.dumpConfig.start()
 
+    def setAudioChannel(self, info):
+        id, audioChannel = info  # 窗口 音效
+        self.config['audioChannel'][id] = audioChannel
+        self.dumpConfig.start()
+
     def popWindow(self, info):  # 悬浮窗播放
         id, roomID, quality, showMax = info
         self.popVideoWidgetList[id].roomID = roomID
         self.popVideoWidgetList[id].quality = quality
         self.popVideoWidgetList[id].resize(1280, 720)
         self.popVideoWidgetList[id].show()
+        self.popVideoWidgetList[id].textBrowser.show()
         if showMax:
             self.popVideoWidgetList[id].showMaximized()
         self.popVideoWidgetList[id].mediaReload()
@@ -343,6 +364,14 @@ class MainWindow(QMainWindow):
             videoWidget.quality = quality
             videoWidget.mediaReload()
         self.config['quality'] = [quality] * 9
+        self.dumpConfig.start()
+
+    def globalAudioChannel(self, audioChannel):
+        for videoWidget in self.videoWidgetList:
+            videoWidget.audioChannel = audioChannel
+            videoWidget.player.audio_set_channel(audioChannel)
+        self.config['audioChannel'] = [audioChannel] * 9
+        self.dumpConfig.start()
 
     def openControlPanel(self):
         self.controlBar.hide() if self.controlBarToken else self.controlBar.show()
@@ -407,10 +436,12 @@ class MainWindow(QMainWindow):
             videoWidget.player.stop()
             videoWidget.getMediaURL.recordToken = False  # 关闭缓存并清除
             videoWidget.getMediaURL.checkTimer.stop()
+            videoWidget.checkPlaying.stop()
         for videoWidget in self.popVideoWidgetList:  # 关闭悬浮窗
             videoWidget.player.stop()
             videoWidget.getMediaURL.recordToken = False
             videoWidget.getMediaURL.checkTimer.stop()
+            videoWidget.checkPlaying.stop()
             videoWidget.close()
         self.dumpConfig.start()
 
@@ -474,6 +505,12 @@ class MainWindow(QMainWindow):
             self.versionMenu.menuAction().setVisible(True)
             if self.controlBarToken:
                 self.controlBar.show()
+        elif QEvent.key() == Qt.Key_F:
+            self.fullScreen()
+        elif QEvent.key() == Qt.Key_H:
+            self.openControlPanel()
+        elif QEvent.key() == Qt.Key_M:
+            self.muteExcept()
 
     def addCoverToPlayer(self, info):  # 窗口 房号
         self.addMedia(info)

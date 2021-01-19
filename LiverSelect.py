@@ -173,15 +173,18 @@ class CoverLabel(QLabel):
         self.recordState = 0  # 0 无录制任务  1 录制中  2 等待开播录制
         self.savePath = ''
         self.setFixedSize(160, 90)
-        self.setStyleSheet('background-color:#708090')  # 灰色背景
+        self.setObjectName('cover')
+        self.setFrameShape(QFrame.Box)
         self.firstUpdateToken = True
         self.layout = QGridLayout(self)
         self.profile = CircleImage()
         self.layout.addWidget(self.profile, 0, 4, 3, 2)
         if topToken:
             brush = '#FFC125'
+            self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#FFC125;background-color:#708090}')
         else:
             brush = '#FFFFFF'
+            self.setStyleSheet('background-color:#708090')  # 灰色背景
         self.titleLabel = OutlinedLabel(fontColor=brush)
         self.layout.addWidget(self.titleLabel, 0, 0, 1, 6)
         self.roomIDLabel = OutlinedLabel(roomID, fontColor=brush)
@@ -201,7 +204,6 @@ class CoverLabel(QLabel):
     def updateLabel(self, info):
         if not info[0]:  # 用户或直播间不存在
             self.liveState = -1
-            self.roomID = '0'
             self.titleLabel.setText('错误的房号')
             self.stateLabel.setText('无该房间')
             self.setStyleSheet('background-color:#8B3A3A')  # 红色背景
@@ -283,9 +285,11 @@ class CoverLabel(QLabel):
                 if self.topToken:
                     self.titleLabel.setBrush('#FFFFFF')
                     self.roomIDLabel.setBrush('#FFFFFF')
+                    self.setStyleSheet('border-width:0px')
                 else:
                     self.titleLabel.setBrush('#FFC125')
                     self.roomIDLabel.setBrush('#FFC125')
+                    self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#FFC125}')
                 self.topToken = not self.topToken
                 self.changeTopToken.emit([self.roomID, self.topToken])  # 发送修改后的置顶token
             elif action == record:
@@ -661,6 +665,10 @@ class LiverPanel(QWidget):
                 elif self.oldLiveStatus[info[1]] != info[4]:  # 状态发生变化
                     roomIDToRefresh.append(info[1])  # 发送给主界面要刷新的房间号
                     self.oldLiveStatus[info[1]] = info[4]  # 更新旧的直播状态列表
+            else:  # 错误的房号
+                for cover in self.coverList:
+                    if cover.roomID == info[1]:
+                        cover.updateLabel(info)
         if roomIDToRefresh:
             self.refreshIDList.emit(roomIDToRefresh)
         self.refreshPanel()

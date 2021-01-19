@@ -129,7 +129,7 @@ class VideoFrame(QFrame):
         self.doubleClicked.emit()
 
 
-class VideoWidget(QWidget):
+class VideoWidget(QFrame):
     mutedChanged = pyqtSignal(list)
     volumeChanged = pyqtSignal(list)
     addMedia = pyqtSignal(list)  # 发送新增的直播
@@ -138,6 +138,7 @@ class VideoWidget(QWidget):
     setDanmu = pyqtSignal()  # 发射弹幕设置信号
     setTranslator = pyqtSignal(list)  # 发送同传关闭信号
     changeQuality = pyqtSignal(list)  # 修改画质
+    changeAudioChannel = pyqtSignal(list)  # 修改音效
     popWindow = pyqtSignal(list)  # 弹出悬浮窗
     hideBarKey = pyqtSignal()  # 隐藏控制条快捷键
     fullScreenKey = pyqtSignal()  # 全屏快捷键
@@ -153,10 +154,15 @@ class VideoWidget(QWidget):
         self.liveStatus = 0  # 初始化直播状态为0
         self.pauseToken = False
         self.quality = 250
+        self.audioChannel = 0  # 0 原始音效  5 杜比音效
         self.volume = volume
         self.leftButtonPress = False
         self.rightButtonPress = False
         self.fullScreen = False
+        self.userPause = False  # 用户暂停
+        self.setFrameShape(QFrame.Box)
+        self.setObjectName('video')
+        self.setStyleSheet('#video{border-width:1px;border-style:solid;border-color:gray}')
 
         self.top = top
         if top:  # 悬浮窗取消关闭按钮 vlc版点关闭后有bug 让用户右键退出
@@ -213,7 +219,7 @@ class VideoWidget(QWidget):
         self.topLabel.setFixedHeight(30)
         # self.topLabel.setAlignment(Qt.AlignCenter)
         self.topLabel.setObjectName('frame')
-        self.topLabel.setStyleSheet("background-color:#BB708090")
+        self.topLabel.setStyleSheet("background-color:#293038")
         # self.topLabel.setFixedHeight(32)
         self.topLabel.setFont(QFont('微软雅黑', 15, QFont.Bold))
         layout.addWidget(self.topLabel, 0, 0, 1, 12)
@@ -221,7 +227,7 @@ class VideoWidget(QWidget):
 
         self.frame = QWidget()
         self.frame.setObjectName('frame')
-        self.frame.setStyleSheet("background-color:#BB708090")
+        self.frame.setStyleSheet("background-color:#293038")
         self.frame.setFixedHeight(50)
         frameLayout = QHBoxLayout(self.frame)
         frameLayout.setContentsMargins(0, 0, 0, 0)
@@ -262,6 +268,13 @@ class VideoWidget(QWidget):
         self.moveTimer = QTimer()
         self.moveTimer.timeout.connect(self.initTextPos)
         self.moveTimer.start(50)
+
+        self.checkPlaying = QTimer()  # 检查播放卡住的定时器
+        self.checkPlaying.timeout.connect(self.checkPlayStatus)
+
+    def checkPlayStatus(self):  # 播放卡住了
+        if not self.player.is_playing() and not self.isHidden() and self.liveStatus != 0 and not self.userPause:
+            self.mediaReload()  # 刷新一下
 
     def initTextPos(self):  # 初始化弹幕机位置
         videoPos = self.mapToGlobal(self.videoFrame.pos())
@@ -373,7 +386,7 @@ class VideoWidget(QWidget):
     def doubleClick(self):
         if not self.top:  # 非弹出类悬浮窗
             self.popWindow.emit([self.id, self.roomID, self.quality, True])
-            self.mediaPlay(1)  # 暂停播放
+            self.mediaPlay(1, True)  # 暂停播放
 
     def leftMouseClicked(self):  # 设置drag事件 发送拖动封面的房间号
         drag = QDrag(self)
@@ -416,6 +429,13 @@ class VideoWidget(QWidget):
         lowQuality = chooseQuality.addAction('流畅')
         if self.quality == 80:
             lowQuality.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
+        chooseAudioChannel = menu.addMenu('选择音效')
+        chooseAudioOrigin = chooseAudioChannel.addAction('原始音效')
+        if self.audioChannel == 0:
+            chooseAudioOrigin.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
+        chooseAudioDolbys = chooseAudioChannel.addAction('杜比音效')
+        if self.audioChannel == 5:
+            chooseAudioDolbys.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
         if not self.top:  # 非弹出类悬浮窗
             popWindow = menu.addAction('悬浮窗播放')
         else:
@@ -457,10 +477,18 @@ class VideoWidget(QWidget):
             self.changeQuality.emit([self.id, 80])
             self.quality = 80
             self.mediaReload()
+        elif action == chooseAudioOrigin:
+            self.changeAudioChannel.emit([self.id, 0])
+            self.player.audio_set_channel(0)
+            self.audioChannel = 0
+        elif action == chooseAudioDolbys:
+            self.changeAudioChannel.emit([self.id, 5])
+            self.player.audio_set_channel(5)
+            self.audioChannel = 5
         if not self.top:
             if action == popWindow:
                 self.popWindow.emit([self.id, self.roomID, self.quality, False])
-                self.mediaPlay(1)  # 暂停播放
+                self.mediaPlay(1, True)  # 暂停播放
         elif self.top:
             if action == percent100:
                 self.setWindowOpacity(1)
@@ -485,8 +513,7 @@ class VideoWidget(QWidget):
             elif action == exit:
                 self.hide()
                 self.mediaStop()
-
-
+                self.textBrowser.hide()
 
     def setVolume(self, value):
         self.player.audio_set_volume(value)
@@ -512,19 +539,27 @@ class VideoWidget(QWidget):
         self.setDanmu.emit()
         # self.setTranslator.emit([self.id, not self.translator.isHidden()])
 
-    def mediaPlay(self, force=0):
+    def mediaPlay(self, force=0, stopDownload=False):
         if force == 1:
             self.player.set_pause(1)
+            self.userPause = True
             self.play.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         elif force == 2:
             self.player.play()
+            self.userPause = False
             self.play.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
         elif self.player.get_state() == vlc.State.Playing:
-            self.player.pause()
+            self.player.set_pause(1)
+            self.userPause = True
             self.play.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         else:
             self.player.play()
+            self.userPause = False
             self.play.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
+        if stopDownload:
+            self.getMediaURL.recordToken = False  # 设置停止缓存标志位
+            self.getMediaURL.checkTimer.stop()
+            self.checkPlaying.stop()
 
     def mediaMute(self, force=0, emit=True):
         if force == 1:
@@ -545,6 +580,7 @@ class VideoWidget(QWidget):
     def mediaReload(self):
         self.getMediaURL.recordToken = False  # 设置停止缓存标志位
         self.getMediaURL.checkTimer.stop()
+        self.checkPlaying.stop()
         self.player.stop()
         if self.roomID != '0':
             self.setTitle()  # 同时获取最新直播状态
@@ -552,6 +588,7 @@ class VideoWidget(QWidget):
                 self.getMediaURL.setConfig(self.roomID, self.quality)  # 设置房号和画质
                 self.getMediaURL.start()  # 开始缓存视频
                 self.getMediaURL.checkTimer.start(3000)  # 启动监测定时器
+                self.checkPlaying.start(3000)  # 启动播放卡顿检测定时器
         else:
             self.mediaStop()
 
@@ -568,6 +605,7 @@ class VideoWidget(QWidget):
             pass
         self.getMediaURL.recordToken = False
         self.getMediaURL.checkTimer.stop()
+        self.checkPlaying.stop()
         self.danmu.terminate()
         self.danmu.quit()
         self.danmu.wait()
@@ -584,6 +622,7 @@ class VideoWidget(QWidget):
         self.danmu.start()
         self.media = self.instance.media_new(cacheName, 'avcodec-hw=dxva2')  # 设置vlc并硬解播放
         self.player.set_media(self.media)  # 设置视频
+        self.player.audio_set_channel(self.audioChannel)
         self.player.play()
 
     def setTitle(self):
