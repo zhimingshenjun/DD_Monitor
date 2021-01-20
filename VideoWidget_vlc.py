@@ -215,6 +215,8 @@ class VideoWidget(QFrame):
         self.player.video_set_key_input(False)
         if platform.system() == 'Windows':
             self.player.set_hwnd(self.videoFrame.winId())
+        elif platform.system() == 'Darwin':  # for MacOS
+            self.player.set_nsobject(int(self.videoFrame.winId()))
         else:
             self.player.set_xwindow(self.videoFrame.winId())
 

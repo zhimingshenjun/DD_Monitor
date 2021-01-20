@@ -11,6 +11,7 @@ from LayoutPanel import LayoutSettingPanel
 from VideoWidget_vlc import PushButton, Slider, VideoWidget
 from LiverSelect import LiverPanel
 
+application_path = ""
 
 def _translate(context, text, disambig):
     return QApplication.translate(context, text, disambig)
@@ -61,7 +62,8 @@ class DumpConfig(QThread):
         self.config = config
 
     def run(self):
-        with open(r'utils/config.json', 'w') as f:
+        configJSONPath = os.path.join(application_path, r'utils/config.json')
+        with open(configJSONPath, 'w') as f:
             f.write(json.dumps(self.config, ensure_ascii=False))
 
 
@@ -72,8 +74,9 @@ class MainWindow(QMainWindow):
         self.resize(1600, 900)
         self.maximumToken = True
         self.cacheFolder = cacheFolder
-        if os.path.exists(r'utils/config.json'):
-            self.config = json.loads(open(r'utils/config.json').read())
+        self.configJSONPath = os.path.join(application_path, r'utils/config.json')
+        if os.path.exists(self.configJSONPath):
+            self.config = json.loads(open(self.configJSONPath).read())
             while len(self.config['player']) < 9:
                 self.config['player'].append(0)
             if type(self.config['roomid']) == list:
@@ -526,17 +529,22 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == '__main__':
-    if not os.path.exists('cache'):  # 启动前初始化cache文件夹
-        os.mkdir('cache')
+    if getattr(sys, 'frozen', False):
+        application_path = os.path.dirname(sys.executable)
+    elif __file__:
+        application_path = os.path.dirname(__file__)
+    cachePath = os.path.join(application_path, 'cache')
+    if not os.path.exists(cachePath):  # 启动前初始化cache文件夹
+        os.mkdir(cachePath)
     try:  # 尝试清除上次缓存 如果失败则跳过
-        for cacheFolder in os.listdir('cache'):
-            shutil.rmtree('cache/%s' % cacheFolder)
+        for cacheFolder in os.listdir(cachePath):
+            shutil.rmtree(os.path.join(application_path, 'cache/%s' % cacheFolder))
     except:
         pass
-    cacheFolder = 'cache/%d' % time.time()  # 初始化缓存文件夹
+    cacheFolder = os.path.join(application_path, 'cache/%d' % time.time())  # 初始化缓存文件夹
     os.mkdir(cacheFolder)
     app = QApplication(sys.argv)
-    with open('utils/qdark.qss', 'r') as f:
+    with open(os.path.join(application_path, 'utils/qdark.qss'), 'r') as f:
         qss = f.read()
     app.setStyleSheet(qss)
     mainWindow = MainWindow(cacheFolder)
