@@ -3,3 +3,5 @@ cache/
 .vscode/
 build/
 dist/
+venv/
+.DS_Store
