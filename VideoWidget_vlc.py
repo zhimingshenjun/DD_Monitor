@@ -623,7 +623,7 @@ class VideoWidget(QFrame):
         self.danmu.message.connect(self.playDanmu)
         self.danmu.terminate()
         self.danmu.start()
-        self.media = self.instance.media_new(cacheName, 'avcodec-hw=dxva2 --verbose 9')  # 设置vlc并硬解播放
+        self.media = self.instance.media_new(cacheName, 'avcodec-hw=dxva2')  # 设置vlc并硬解播放
         self.player.set_media(self.media)  # 设置视频
         self.player.audio_set_channel(self.audioChannel)
         self.player.play()
