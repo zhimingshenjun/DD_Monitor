@@ -35,7 +35,7 @@ class Version(QWidget):
         self.resize(350, 150)
         self.setWindowTitle('当前版本')
         layout = QGridLayout(self)
-        layout.addWidget(QLabel('DD监控室 v0.11测试版'), 0, 0, 1, 2)
+        layout.addWidget(QLabel('DD监控室 v0.12测试版'), 0, 0, 1, 2)
         layout.addWidget(QLabel('by 神君Channel'), 1, 0, 1, 1)
         releases_url = QLabel('')
         releases_url.setOpenExternalLinks(True)
@@ -61,8 +61,11 @@ class DumpConfig(QThread):
         self.config = config
 
     def run(self):
-        with open(r'utils/config.json', 'w') as f:
-            f.write(json.dumps(self.config, ensure_ascii=False))
+        try:
+            with open(r'utils/config.json', 'w') as f:
+                f.write(json.dumps(self.config, ensure_ascii=False))
+        except Exception as e:
+            print(str(e))
 
 
 class MainWindow(QMainWindow):
@@ -72,25 +75,31 @@ class MainWindow(QMainWindow):
         self.resize(1600, 900)
         self.maximumToken = True
         self.cacheFolder = cacheFolder
-        if os.path.exists(r'utils/config.json'):
-            self.config = json.loads(open(r'utils/config.json').read())
-            while len(self.config['player']) < 9:
-                self.config['player'].append(0)
-            if type(self.config['roomid']) == list:
-                roomIDList = self.config['roomid']
-                self.config['roomid'] = {}
-                for roomID in roomIDList:
-                    self.config['roomid'][roomID] = False
-            if 'quality' not in self.config:
-                self.config['quality'] = [80] * 9
-            if 'audioChannel' not in self.config:
-                self.config['audioChannel'] = [0] * 9
-            if 'translator' not in self.config:
-                self.config['translator'] = [True] * 9
-            for index, textSetting in enumerate(self.config['danmu']):
-                if type(textSetting) == bool:
-                    self.config['danmu'][index] = [textSetting, 20, 2, 6, 0, '【 [ {']
-        else:
+        self.config = {}
+        if os.path.exists(r'utils/config.json') and os.path.getsize(r'utils/config.json'):
+            try:
+                self.config = json.loads(open(r'utils/config.json').read())
+                while len(self.config['player']) < 9:
+                    self.config['player'].append(0)
+                if type(self.config['roomid']) == list:
+                    roomIDList = self.config['roomid']
+                    self.config['roomid'] = {}
+                    for roomID in roomIDList:
+                        self.config['roomid'][roomID] = False
+                if 'quality' not in self.config:
+                    self.config['quality'] = [80] * 9
+                if 'audioChannel' not in self.config:
+                    self.config['audioChannel'] = [0] * 9
+                if 'translator' not in self.config:
+                    self.config['translator'] = [True] * 9
+                for index, textSetting in enumerate(self.config['danmu']):
+                    if type(textSetting) == bool:
+                        self.config['danmu'][index] = [textSetting, 20, 2, 6, 0, '【 [ {']
+                if 'hardwareDecode' not in self.config:
+                    self.config['hardwareDecode'] = True
+            except:
+                self.config = {}
+        if not self.config:
             self.config = {
                 'roomid': {'21396545': False, '21402309': False, '22384516': False, '8792912': False,
                            '21696950': False, '14327465': False, '704808': True, '1321846': False,
@@ -108,6 +117,7 @@ class MainWindow(QMainWindow):
                 'danmu': [[True, 20, 2, 6, 0, '【 [ {']] * 9,  # 显示弹幕, 透明度, 横向占比, 纵向占比, 显示同传, 同传过滤字符
                 'globalVolume': 30,
                 'control': True,
+                'hardwareDecode': True,
             }
         self.dumpConfig = DumpConfig(self.config)
         mainWidget = QWidget()
@@ -142,6 +152,7 @@ class MainWindow(QMainWindow):
             self.videoWidgetList[i].slider.setValue(self.config['volume'][i])
             self.videoWidgetList[i].quality = self.config['quality'][i]
             self.videoWidgetList[i].audioChannel = self.config['audioChannel'][i]
+            self.videoWidgetList[i].hardwareDecode = self.config['hardwareDecode']
             self.popVideoWidgetList.append(VideoWidget(i + 9, volume, cacheFolder, True, '悬浮窗', [1280, 720]))
         self.setPlayer()
 
@@ -206,6 +217,11 @@ class MainWindow(QMainWindow):
         globalAudioMenu.addAction(audioOriginAction)
         audioDolbysAction = QAction('杜比音效', self, triggered=lambda: self.globalAudioChannel(5))
         globalAudioMenu.addAction(audioDolbysAction)
+        decodeMenu = self.optionMenu.addMenu('解码方案')
+        hardwareDecodeAction = QAction('硬解', self, triggered=lambda: self.setDecode(True))
+        decodeMenu.addAction(hardwareDecodeAction)
+        softwareDecodeAction = QAction('软解', self, triggered=lambda: self.setDecode(False))
+        decodeMenu.addAction(softwareDecodeAction)
         controlPanelAction = QAction('显示 / 隐藏控制条(H)', self, triggered=self.openControlPanel)
         self.optionMenu.addAction(controlPanelAction)
         self.fullScreenAction = QAction('全屏(F) / 退出(Esc)', self, triggered=self.fullScreen)
@@ -268,6 +284,11 @@ class MainWindow(QMainWindow):
         toVideo.topLabel.setText(toVideo.topLabel.text().replace('窗口%s' % (toID + 1), '窗口%s' % (fromID + 1)))
         fromMuted, toMuted = self.config['muted'][fromID], self.config['muted'][toID]  # 获取原来的静音设置
         fromVolume, toVolume = self.config['volume'][fromID], self.config['volume'][toID]  # 获取原来的音量
+        fromVideoPos = fromVideo.mapToGlobal(fromVideo.videoFrame.pos())  # 保持弹幕框相对位置
+        toVideoPos = toVideo.mapToGlobal(toVideo.videoFrame.pos())
+        fromTextDelta, toTextDelta = fromVideo.textPosDelta, toVideo.textPosDelta
+        fromVideo.textBrowser.move(toVideoPos + fromTextDelta)
+        toVideo.textBrowser.move(fromVideoPos + toTextDelta)
         fromVideo.mediaMute(toMuted)  # 交换静音设置
         fromVideo.setVolume(toVolume)  # 交换音量
         toVideo.mediaMute(fromMuted)
@@ -331,7 +352,8 @@ class MainWindow(QMainWindow):
 
     def globalMediaReload(self):
         for videoWidget in self.videoWidgetList:
-            videoWidget.mediaReload()
+            if not videoWidget.isHidden():
+                videoWidget.mediaReload()
 
     def globalMediaMute(self):
         if self.globalMuteToken:
@@ -348,7 +370,7 @@ class MainWindow(QMainWindow):
 
     def globalSetVolume(self, value):
         for videoWidget in self.videoWidgetList:
-            videoWidget.player.audio_set_volume(value)
+            videoWidget.player.audio_set_volume(int(value * videoWidget.volumeAmplify))
             videoWidget.volume = value
             videoWidget.slider.setValue(value)
         self.config['volume'] = [value] * 9
@@ -361,8 +383,9 @@ class MainWindow(QMainWindow):
 
     def globalQuality(self, quality):
         for videoWidget in self.videoWidgetList:
-            videoWidget.quality = quality
-            videoWidget.mediaReload()
+            if not videoWidget.isHidden():  # 窗口没有被隐藏
+                videoWidget.quality = quality
+                videoWidget.mediaReload()
         self.config['quality'] = [quality] * 9
         self.dumpConfig.start()
 
@@ -372,6 +395,12 @@ class MainWindow(QMainWindow):
             videoWidget.player.audio_set_channel(audioChannel)
         self.config['audioChannel'] = [audioChannel] * 9
         self.dumpConfig.start()
+
+    def setDecode(self, hardwareDecodeToken):
+        for videoWidget in self.videoWidgetList:
+            videoWidget.hardwareDecode = hardwareDecodeToken
+        self.globalMediaReload()
+        self.config['hardwareDecode'] = hardwareDecodeToken
 
     def openControlPanel(self):
         self.controlBar.hide() if self.controlBarToken else self.controlBar.show()
@@ -395,7 +424,7 @@ class MainWindow(QMainWindow):
 
     def checkMousePos(self):
         for videoWidget in self.videoWidgetList:  # vlc的播放会直接音量最大化 实在没地方放了 写在这里实时强制修改它的音量
-            videoWidget.player.audio_set_volume(videoWidget.volume)
+            videoWidget.player.audio_set_volume(int(videoWidget.volume * videoWidget.volumeAmplify))
         newMousePos = QCursor.pos()
         if newMousePos != self.oldMousePos:
             self.setCursor(Qt.ArrowCursor)  # 鼠标动起来就显示
@@ -414,7 +443,9 @@ class MainWindow(QMainWindow):
 
     def moveEvent(self, QMoveEvent):  # 捕获主窗口moveEvent来实时同步弹幕机位置
         for videoWidget in self.videoWidgetList:
-            videoWidget.moveTextBrowser()
+            videoPos = videoWidget.mapToGlobal(videoWidget.videoFrame.pos())  # videoFrame的坐标要转成globalPos
+            videoWidget.textBrowser.move(videoPos + videoWidget.textPosDelta)
+            videoWidget.textPosDelta = videoWidget.textBrowser.pos() - videoPos
 
     def changeEvent(self, QEvent):  # 当用户最小化界面的时候把弹幕机也隐藏了
         try:
@@ -463,6 +494,10 @@ class MainWindow(QMainWindow):
             self.mainLayout.addWidget(self.videoWidgetList[index], y, x, h, w)
             if self.videoWidgetList[index].roomID != '0':
                 self.videoWidgetList[index].mediaPlay(2)  # 显示的窗口播放
+        for videoWidget in self.videoWidgetList[index + 1:]:  # 被隐藏起来的窗口
+            videoWidget.getMediaURL.recordToken = False  # 关闭缓存并清除
+            videoWidget.getMediaURL.checkTimer.stop()
+            videoWidget.checkPlaying.stop()
         self.config['layout'] = layoutConfig
         self.dumpConfig.start()
 
@@ -536,10 +571,13 @@ if __name__ == '__main__':
     cacheFolder = 'cache/%d' % time.time()  # 初始化缓存文件夹
     os.mkdir(cacheFolder)
     app = QApplication(sys.argv)
+    splash = QSplashScreen(QPixmap('utils/splash.jpg'))
+    splash.show()
     with open('utils/qdark.qss', 'r') as f:
         qss = f.read()
     app.setStyleSheet(qss)
     mainWindow = MainWindow(cacheFolder)
     mainWindow.showMaximized()
     mainWindow.show()
+    splash.hide()
     sys.exit(app.exec_())

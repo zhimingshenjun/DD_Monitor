@@ -156,6 +156,8 @@ class VideoWidget(QFrame):
         self.quality = 250
         self.audioChannel = 0  # 0 原始音效  5 杜比音效
         self.volume = volume
+        self.volumeAmplify = 1.0  # 音量加倍
+        self.hardwareDecode = True
         self.leftButtonPress = False
         self.rightButtonPress = False
         self.fullScreen = False
@@ -203,6 +205,8 @@ class VideoWidget(QFrame):
         self.textBrowser.optionWidget.translateFitler.textChanged.connect(self.setTranslateFilter)
         self.textBrowser.closeSignal.connect(self.closeDanmu)
         self.textBrowser.moveSignal.connect(self.moveTextBrowser)
+
+        self.textPosDelta = QPoint(0, 0)  # 弹幕框和窗口之间的坐标差
 
         self.videoFrame = VideoFrame()  # 新版本vlc内核播放器
         self.videoFrame.rightClicked.connect(self.rightMouseClicked)
@@ -320,9 +324,15 @@ class VideoWidget(QFrame):
 
     def setTranslateBrowser(self, index):
         self.textSetting[4] = index
-        self.textBrowser.transBrowser.show() if not index else self.textBrowser.transBrowser.hide()  # 显示/隐藏同传
-        self.textBrowser.adjustSize()
-        self.resize(self.width() * self.horiPercent, self.height() * self.vertPercent)
+        if index == 0:  # 显示弹幕和同传
+            self.textBrowser.textBrowser.show()
+            self.textBrowser.transBrowser.show()
+        elif index == 1:  # 只显示弹幕
+            self.textBrowser.textBrowser.show()
+            self.textBrowser.transBrowser.hide()
+        elif index == 2:  # 只显示同传
+            self.textBrowser.textBrowser.hide()
+            self.textBrowser.transBrowser.show()
         self.setDanmu.emit()
 
     def setTranslateFilter(self, filterWords):
@@ -346,7 +356,7 @@ class VideoWidget(QFrame):
         self.textBrowser.transBrowser.verticalScrollBar().setValue(100000000)
         self.moveTextBrowser()
 
-    def moveEvent(self, QMoveEvent):  # 理论上给悬浮窗同步弹幕机用的moveEvent
+    def moveEvent(self, QMoveEvent):  # 理论上给悬浮窗同步弹幕机用的moveEvent 但不生效 但是又不能删掉 不然交换窗口弹幕机有bug
         self.moveTextBrowser()
 
     def moveTextBrowser(self, point=None):
@@ -372,6 +382,7 @@ class VideoWidget(QFrame):
             elif danmuY > videoY + videoH - danmuH:
                 danmuY = videoY + videoH - danmuH
         self.textBrowser.move(danmuX, danmuY)
+        self.textPosDelta = self.textBrowser.pos() - videoPos
 
     def enterEvent(self, QEvent):
         self.hoverToken = True
@@ -436,6 +447,25 @@ class VideoWidget(QFrame):
         chooseAudioDolbys = chooseAudioChannel.addAction('杜比音效')
         if self.audioChannel == 5:
             chooseAudioDolbys.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
+        chooseAmplify = menu.addMenu('音量增大')
+        chooseAmp_0_5 = chooseAmplify.addAction('x 0.5')
+        if self.volumeAmplify == 0.5:
+            chooseAmp_0_5.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
+        chooseAmp_1 = chooseAmplify.addAction('x 1.0')
+        if self.volumeAmplify == 1.0:
+            chooseAmp_1.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
+        chooseAmp_1_5 = chooseAmplify.addAction('x 1.5')
+        if self.volumeAmplify == 1.5:
+            chooseAmp_1_5.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
+        chooseAmp_2 = chooseAmplify.addAction('x 2.0')
+        if self.volumeAmplify == 2.0:
+            chooseAmp_2.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
+        chooseAmp_3 = chooseAmplify.addAction('x 3.0')
+        if self.volumeAmplify == 3.0:
+            chooseAmp_3.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
+        chooseAmp_4 = chooseAmplify.addAction('x 4.0')
+        if self.volumeAmplify == 4.0:
+            chooseAmp_4.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
         if not self.top:  # 非弹出类悬浮窗
             popWindow = menu.addAction('悬浮窗播放')
         else:
@@ -485,6 +515,18 @@ class VideoWidget(QFrame):
             self.changeAudioChannel.emit([self.id, 5])
             self.player.audio_set_channel(5)
             self.audioChannel = 5
+        elif action == chooseAmp_0_5:
+            self.volumeAmplify = 0.5
+        elif action == chooseAmp_1:
+            self.volumeAmplify = 1.0
+        elif action == chooseAmp_1_5:
+            self.volumeAmplify = 1.5
+        elif action == chooseAmp_2:
+            self.volumeAmplify = 2.0
+        elif action == chooseAmp_3:
+            self.volumeAmplify = 3.0
+        elif action == chooseAmp_4:
+            self.volumeAmplify = 4.0
         if not self.top:
             if action == popWindow:
                 self.popWindow.emit([self.id, self.roomID, self.quality, False])
@@ -516,7 +558,7 @@ class VideoWidget(QFrame):
                 self.textBrowser.hide()
 
     def setVolume(self, value):
-        self.player.audio_set_volume(value)
+        self.player.audio_set_volume(int(value * self.volumeAmplify))
         self.volume = value  # 记录volume值 每次刷新要用到
         self.slider.setValue(value)
         self.volumeChanged.emit([self.id, value])
@@ -588,7 +630,7 @@ class VideoWidget(QFrame):
                 self.getMediaURL.setConfig(self.roomID, self.quality)  # 设置房号和画质
                 self.getMediaURL.start()  # 开始缓存视频
                 self.getMediaURL.checkTimer.start(3000)  # 启动监测定时器
-                self.checkPlaying.start(3000)  # 启动播放卡顿检测定时器
+                self.checkPlaying.start(1500)  # 启动播放卡顿检测定时器
         else:
             self.mediaStop()
 
@@ -620,7 +662,10 @@ class VideoWidget(QFrame):
         self.danmu.message.connect(self.playDanmu)
         self.danmu.terminate()
         self.danmu.start()
-        self.media = self.instance.media_new(cacheName, 'avcodec-hw=dxva2')  # 设置vlc并硬解播放
+        if self.hardwareDecode:
+            self.media = self.instance.media_new(cacheName, 'avcodec-hw=dxva2')  # 设置vlc并硬解播放
+        else:
+            self.media = self.instance.media_new(cacheName)  # 软解
         self.player.set_media(self.media)  # 设置视频
         self.player.audio_set_channel(self.audioChannel)
         self.player.play()
@@ -649,17 +694,14 @@ class VideoWidget(QFrame):
         self.titleLabel.setText(uname)
 
     def playDanmu(self, message):
-        if self.textBrowser.transBrowser.isHidden():
+        token = False
+        for symbol in self.filters:
+            if symbol in message:
+                self.textBrowser.transBrowser.append(message)  # 同传不换行
+                token = True
+                break
+        if not token:
             self.textBrowser.textBrowser.append(message + '\n')
-        else:
-            token = False
-            for symbol in self.filters:
-                if symbol in message:
-                    self.textBrowser.transBrowser.append(message)  # 同传不换行
-                    token = True
-                    break
-            if not token:
-                self.textBrowser.textBrowser.append(message + '\n')
 
     def keyPressEvent(self, QKeyEvent):
         if QKeyEvent.key() == Qt.Key_Escape:

@@ -181,7 +181,7 @@ class CoverLabel(QLabel):
         self.layout.addWidget(self.profile, 0, 4, 3, 2)
         if topToken:
             brush = '#FFC125'
-            self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#FFC125;background-color:#708090}')
+            self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#dfa616;background-color:#708090}')
         else:
             brush = '#FFFFFF'
             self.setStyleSheet('background-color:#708090')  # 灰色背景
@@ -223,7 +223,7 @@ class CoverLabel(QLabel):
                 self.liveState = 0
                 self.clear()
                 if self.topToken:
-                    self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#FFC125;background-color:#708090}')
+                    self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#dfa616;background-color:#708090}')
                 else:
                     self.setStyleSheet('background-color:#708090')  # 灰色背景
             self.refreshStateLabel()
@@ -292,7 +292,7 @@ class CoverLabel(QLabel):
                 else:
                     self.titleLabel.setBrush('#FFC125')
                     self.roomIDLabel.setBrush('#FFC125')
-                    self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#FFC125;background-color:#708090}')
+                    self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#dfa616;background-color:#708090}')
                 self.topToken = not self.topToken
                 self.changeTopToken.emit([self.roomID, self.topToken])  # 发送修改后的置顶token
             elif action == record:
@@ -423,7 +423,7 @@ class AddLiverRoomWidget(QWidget):
         followsLayout = QGridLayout(followsPage)
         followsLayout.setContentsMargins(0, 0, 0, 0)
         followsLayout.addWidget(QLabel(), 0, 2, 1, 1)
-        followsLayout.addWidget(QLabel('自动添加你关注的up直播间 （只能拉取前100关注）'), 0, 3, 1, 3)
+        followsLayout.addWidget(QLabel('自动添加你关注的up直播间 （只能拉取最近关注的100名）'), 0, 3, 1, 3)
         self.uidEdit = QLineEdit('请输入你的uid')
         self.uidEdit.setMaximumWidth(100)
         followsLayout.addWidget(self.uidEdit, 0, 0, 1, 1)

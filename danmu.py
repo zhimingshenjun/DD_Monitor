@@ -60,7 +60,7 @@ class TextOpation(QWidget):
         self.setWindowTitle('弹幕窗设置')
         self.setWindowFlag(Qt.WindowStaysOnTopHint)
         layout = QGridLayout(self)
-        layout.addWidget(QLabel('窗体颜色浓度'), 0, 0, 1, 1)
+        layout.addWidget(QLabel('窗体透明度'), 0, 0, 1, 1)
         self.opacitySlider = Slider()
         self.opacitySlider.setValue(setting[0])
         layout.addWidget(self.opacitySlider, 0, 1, 1, 1)
@@ -74,9 +74,9 @@ class TextOpation(QWidget):
         self.verticalCombobox.addItems(['50%', '55%', '60%', '65%', '70%', '75%', '80%', '85%', '90%', '95%', '100%'])
         self.verticalCombobox.setCurrentIndex(setting[2])
         layout.addWidget(self.verticalCombobox, 2, 1, 1, 1)
-        layout.addWidget(QLabel('单独同传窗口'), 3, 0, 1, 1)
+        layout.addWidget(QLabel('弹幕窗类型'), 3, 0, 1, 1)
         self.translateCombobox = QComboBox()
-        self.translateCombobox.addItems(['开启', '关闭'])
+        self.translateCombobox.addItems(['弹幕和同传', '只显示弹幕', '只显示同传'])
         self.translateCombobox.setCurrentIndex(setting[3])
         layout.addWidget(self.translateCombobox, 3, 1, 1, 1)
         layout.addWidget(QLabel('同传过滤字符 (空格隔开)'), 4, 0, 1, 1)
@@ -115,6 +115,11 @@ class TextBrowser(QWidget):
         self.textBrowser = QTextBrowser()
         self.textBrowser.setFont(QFont('Microsoft JhengHei', 16, QFont.Bold))
         self.textBrowser.setStyleSheet('border-width:1')
+        textCursor = self.textBrowser.textCursor()
+        textBlockFormat = QTextBlockFormat()
+        textBlockFormat.setLineHeight(16, QTextBlockFormat.FixedHeight)  # 弹幕框行距
+        textCursor.setBlockFormat(textBlockFormat)
+        self.textBrowser.setTextCursor(textCursor)
         layout.addWidget(self.textBrowser, 1, 0, 1, 10)
 
         self.transBrowser = QTextBrowser()
@@ -128,16 +133,3 @@ class TextBrowser(QWidget):
 
     def moveWindow(self, moveDelta):
         self.moveSignal.emit(self.pos() + moveDelta)
-        # newPos = self.pos() + moveDelta
-        # x, y = newPos.x(), newPos.y()
-        # rightBorder = self.parent().width() - self.width()
-        # bottomBoder = self.parent().height() - self.height()
-        # if x < 0:
-        #     x = 0
-        # elif x > rightBorder:
-        #     x = rightBorder
-        # if y < 30:
-        #     y = 30
-        # elif y > bottomBoder:
-        #     y = bottomBoder
-        # self.move(x, y)
