@@ -170,8 +170,8 @@ class VideoWidget(QFrame):
         if top:  # 悬浮窗取消关闭按钮 vlc版点关闭后有bug 让用户右键退出
             self.setWindowFlags(Qt.CustomizeWindowHint | Qt.WindowMinimizeButtonHint | Qt.WindowMaximizeButtonHint)
         self.textSetting = textSetting
-        self.horiPercent = [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5][self.textSetting[2]]
-        self.vertPercent = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1][self.textSetting[3]]
+        self.horiPercent = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0][self.textSetting[2]]
+        self.vertPercent = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0][self.textSetting[3]]
         self.filters = textSetting[5].split(' ')
         self.opacity = 100
         if top:
@@ -303,7 +303,7 @@ class VideoWidget(QFrame):
 
     def setHorizontalPercent(self, index):  # 设置弹幕框水平宽度
         self.textSetting[2] = index
-        self.horiPercent = [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5][index]  # 记录横向占比
+        self.horiPercent = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0][index]  # 记录横向占比
         width = self.width() * self.horiPercent
         self.textBrowser.resize(width, self.textBrowser.height())
         if width > 300:
@@ -321,7 +321,7 @@ class VideoWidget(QFrame):
 
     def setVerticalPercent(self, index):  # 设置弹幕框垂直高度
         self.textSetting[3] = index
-        self.vertPercent = [0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 1][index]  # 记录纵向占比
+        self.vertPercent = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0][index]  # 记录纵向占比
         self.textBrowser.resize(self.textBrowser.width(), self.height() * self.vertPercent)
         self.textBrowser.textBrowser.verticalScrollBar().setValue(100000000)
         self.textBrowser.transBrowser.verticalScrollBar().setValue(100000000)
@@ -333,11 +333,12 @@ class VideoWidget(QFrame):
             self.textBrowser.textBrowser.show()
             self.textBrowser.transBrowser.show()
         elif index == 1:  # 只显示弹幕
-            self.textBrowser.textBrowser.show()
             self.textBrowser.transBrowser.hide()
+            self.textBrowser.textBrowser.show()
         elif index == 2:  # 只显示同传
             self.textBrowser.textBrowser.hide()
             self.textBrowser.transBrowser.show()
+        self.textBrowser.resize(self.width() * self.horiPercent, self.height() * self.vertPercent)
         self.setDanmu.emit()
 
     def setTranslateFilter(self, filterWords):
@@ -674,6 +675,7 @@ class VideoWidget(QFrame):
         self.player.set_media(self.media)  # 设置视频
         self.player.audio_set_channel(self.audioChannel)
         self.player.play()
+        self.moveTimer.start()  # 启动移动弹幕窗的timer
 
     def setTitle(self):
         if self.roomID == '0':

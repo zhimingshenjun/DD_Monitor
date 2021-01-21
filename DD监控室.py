@@ -7,9 +7,11 @@ DD监控室主界面进程 包含对所有子页面的初始化、排版管理
 import os, sys, json, time, shutil
 from PyQt5.Qt import *
 from LayoutPanel import LayoutSettingPanel
-# from VideoWidget import PushButton, Slider, VideoWidget
+# from VideoWidget import PushButton, Slider, VideoWidget  # 已弃用
 from VideoWidget_vlc import PushButton, Slider, VideoWidget
 from LiverSelect import LiverPanel
+from pay import pay
+
 
 application_path = ""
 
@@ -36,7 +38,7 @@ class Version(QWidget):
         self.resize(350, 150)
         self.setWindowTitle('当前版本')
         layout = QGridLayout(self)
-        layout.addWidget(QLabel('DD监控室 v0.11测试版'), 0, 0, 1, 2)
+        layout.addWidget(QLabel('DD监控室 v0.13测试版'), 0, 0, 1, 2)
         layout.addWidget(QLabel('by 神君Channel'), 1, 0, 1, 1)
         releases_url = QLabel('')
         releases_url.setOpenExternalLinks(True)
@@ -60,10 +62,20 @@ class DumpConfig(QThread):
     def __init__(self, config):
         super(DumpConfig, self).__init__()
         self.config = config
+        self.backupNumber = 1
 
     def run(self):
         try:
             configJSONPath = os.path.join(application_path, r'utils/config.json')
+            with open(configJSONPath, 'w') as f:
+                f.write(json.dumps(self.config, ensure_ascii=False))
+        except Exception as e:
+            print(str(e))
+        try:  # 备份 防止存储config时崩溃
+            configJSONPath = os.path.join(application_path, r'utils/config_备份%d.json' % self.backupNumber)
+            self.backupNumber += 1
+            if self.backupNumber == 4:
+                self.backupNumber = 1
             with open(configJSONPath, 'w') as f:
                 f.write(json.dumps(self.config, ensure_ascii=False))
         except Exception as e:
@@ -78,30 +90,43 @@ class MainWindow(QMainWindow):
         self.cacheFolder = cacheFolder
         self.configJSONPath = os.path.join(application_path, r'utils/config.json')
         self.config = {}
-        if os.path.exists(self.configJSONPath) and os.path.getsize(self.configJSONPath):
-            try:
-                self.config = json.loads(open(self.configJSONPath).read())
-                while len(self.config['player']) < 9:
-                    self.config['player'].append(0)
-                if type(self.config['roomid']) == list:
-                    roomIDList = self.config['roomid']
-                    self.config['roomid'] = {}
-                    for roomID in roomIDList:
-                        self.config['roomid'][roomID] = False
-                if 'quality' not in self.config:
-                    self.config['quality'] = [80] * 9
-                if 'audioChannel' not in self.config:
-                    self.config['audioChannel'] = [0] * 9
-                if 'translator' not in self.config:
-                    self.config['translator'] = [True] * 9
-                for index, textSetting in enumerate(self.config['danmu']):
-                    if type(textSetting) == bool:
-                        self.config['danmu'][index] = [textSetting, 20, 2, 6, 0, '【 [ {']
-                if 'hardwareDecode' not in self.config:
-                    self.config['hardwareDecode'] = True
-            except:
-                self.config = {}
-        if not self.config:
+        if os.path.exists(self.configJSONPath):  # 读取config
+            if os.path.getsize(self.configJSONPath):
+                try:
+                    self.config = json.loads(open(self.configJSONPath).read())
+
+                except:
+                    self.config = {}
+        if not self.config:  # 读取config失败 尝试读取备份
+            for backupNumber in [1, 2, 3]:  # 备份预设123
+                self.configJSONPath = os.path.join(application_path, r'utils/config_备份%d.json' % backupNumber)
+                if os.path.exists(self.configJSONPath):  # 如果备份文件存在
+                    if os.path.getsize(self.configJSONPath):  # 如过备份文件有效
+                        try:
+                            self.config = json.loads(open(self.configJSONPath).read())
+                            break
+                        except:
+                            self.config = {}
+        if self.config:  # 如果能成功读取到config文件
+            while len(self.config['player']) < 9:
+                self.config['player'].append(0)
+            if type(self.config['roomid']) == list:
+                roomIDList = self.config['roomid']
+                self.config['roomid'] = {}
+                for roomID in roomIDList:
+                    self.config['roomid'][roomID] = False
+            if 'quality' not in self.config:
+                self.config['quality'] = [80] * 9
+            if 'audioChannel' not in self.config:
+                self.config['audioChannel'] = [0] * 9
+            if 'translator' not in self.config:
+                self.config['translator'] = [True] * 9
+            for index, textSetting in enumerate(self.config['danmu']):
+                if type(textSetting) == bool:
+                    self.config['danmu'][index] = [textSetting, 20, 1, 7, 0, '【 [ {']
+            if 'hardwareDecode' not in self.config:
+                self.config['hardwareDecode'] = True
+        else:
             self.config = {
                 'roomid': {'21396545': False, '21402309': False, '22384516': False, '8792912': False,
                            '21696950': False, '14327465': False, '704808': True, '1321846': False,
@@ -116,7 +141,7 @@ class MainWindow(QMainWindow):
                 'audioChannel': [0] * 9,
                 'muted': [1] * 9,
                 'volume': [50] * 9,
-                'danmu': [[True, 20, 2, 6, 0, '【 [ {']] * 9,  # 显示弹幕, 透明度, 横向占比, 纵向占比, 显示同传, 同传过滤字符
+                'danmu': [[True, 50, 1, 7, 0, '【 [ {']] * 9,  # 显示弹幕, 透明度, 横向占比, 纵向占比, 显示同传, 同传过滤字符
                 'globalVolume': 30,
                 'control': True,
                 'hardwareDecode': True,
@@ -131,6 +156,7 @@ class MainWindow(QMainWindow):
         self.layoutSettingPanel.layoutConfig.connect(self.changeLayout)
         self.version = Version()
         self.hotKey = HotKey()
+        self.pay = pay()
 
         self.videoWidgetList = []
         self.popVideoWidgetList = []
@@ -218,20 +244,33 @@ class MainWindow(QMainWindow):
         globalAudioMenu.addAction(audioOriginAction)
         audioDolbysAction = QAction('杜比音效', self, triggered=lambda: self.globalAudioChannel(5))
         globalAudioMenu.addAction(audioDolbysAction)
+        hardDecodeMenu = self.optionMenu.addMenu('解码方案')
+        hardDecodeAction = QAction('硬解', self, triggered=lambda: self.setDecode(True))
+        hardDecodeMenu.addAction(hardDecodeAction)
+        softDecodeAction = QAction('软解', self, triggered=lambda: self.setDecode(False))
+        hardDecodeMenu.addAction(softDecodeAction)
         controlPanelAction = QAction('显示 / 隐藏控制条(H)', self, triggered=self.openControlPanel)
         self.optionMenu.addAction(controlPanelAction)
         self.fullScreenAction = QAction('全屏(F) / 退出(Esc)', self, triggered=self.fullScreen)
         self.optionMenu.addAction(self.fullScreenAction)
+        exportConfig = QAction('导出预设', self, triggered=self.exportConfig)
+        self.optionMenu.addAction(exportConfig)
+        importConfig = QAction('导入预设', self, triggered=self.importConfig)
+        self.optionMenu.addAction(importConfig)
 
-        self.versionMenu = self.menuBar().addMenu('关于DD监控室')
-        githubAction = QAction('GitHub', self, triggered=self.openGithub)
-        self.versionMenu.addAction(githubAction)
+        self.versionMenu = self.menuBar().addMenu('帮助')
         bilibiliAction = QAction('B站', self, triggered=self.openBilibili)
         self.versionMenu.addAction(bilibiliAction)
         hotKeyAction = QAction('快捷键', self, triggered=self.openHotKey)
         self.versionMenu.addAction(hotKeyAction)
         versionAction = QAction('当前版本', self, triggered=self.openVersion)
         self.versionMenu.addAction(versionAction)
+
+        self.payMenu = self.menuBar().addMenu('开源和投喂')
+        githubAction = QAction('GitHub', self, triggered=self.openGithub)
+        self.payMenu.addAction(githubAction)
+        feedAction = QAction('投喂作者', self, triggered=self.openFeed)
+        self.payMenu.addAction(feedAction)
 
         self.oldMousePos = QPoint(0, 0)  # 初始化鼠标坐标
         self.hideMouseCnt = 90
@@ -418,6 +457,10 @@ class MainWindow(QMainWindow):
         self.hotKey.hide()
         self.hotKey.show()
 
+    def openFeed(self):
+        self.pay.hide()
+        self.pay.show()
+
     def checkMousePos(self):
         for videoWidget in self.videoWidgetList:  # vlc的播放会直接音量最大化 实在没地方放了 写在这里实时强制修改它的音量
             videoWidget.player.audio_set_volume(int(videoWidget.volume * videoWidget.volumeAmplify))
@@ -425,7 +468,7 @@ class MainWindow(QMainWindow):
         if newMousePos != self.oldMousePos:
             self.setCursor(Qt.ArrowCursor)  # 鼠标动起来就显示
             self.oldMousePos = newMousePos
-            self.hideMouseCnt = 6  # 刷新隐藏鼠标的间隔
+            self.hideMouseCnt = 4  # 刷新隐藏鼠标的间隔
         if self.hideMouseCnt > 0:
             self.hideMouseCnt -= 1
         else:
@@ -485,11 +528,12 @@ class MainWindow(QMainWindow):
             self.mainLayout.removeWidget(self.mainLayout.itemAt(0).widget())
         for index, layout in enumerate(layoutConfig):
             y, x, h, w = layout
-            self.videoWidgetList[index].show()
-            self.videoWidgetList[index].textBrowser.show()
-            self.mainLayout.addWidget(self.videoWidgetList[index], y, x, h, w)
-            if self.videoWidgetList[index].roomID != '0':
-                self.videoWidgetList[index].mediaPlay(2)  # 显示的窗口播放
+            videoWidget = self.videoWidgetList[index]
+            videoWidget.show()
+            videoWidget.textBrowser.show()
+            self.mainLayout.addWidget(videoWidget, y, x, h, w)
+            if videoWidget.roomID != '0':
+                videoWidget.mediaPlay(2)  # 显示的窗口播放
         for videoWidget in self.videoWidgetList[index + 1:]:  # 被隐藏起来的窗口
             videoWidget.getMediaURL.recordToken = False  # 关闭缓存并清除
             videoWidget.getMediaURL.checkTimer.stop()
@@ -518,6 +562,48 @@ class MainWindow(QMainWindow):
             for videoWidget in self.videoWidgetList:
                 videoWidget.fullScreen = True
             self.showFullScreen()
+
+    def exportConfig(self):
+        self.savePath = QFileDialog.getSaveFileName(self, "选择保存路径", 'DD监控室预设', "*.json")[0]
+        if self.savePath:  # 保存路径有效
+            try:
+                with open(self.savePath, 'w') as f:
+                    f.write(json.dumps(self.config, ensure_ascii=False))
+                QMessageBox.information(self, '导出预设', '导出完成', QMessageBox.Ok)
+            except Exception as e:
+                print(str(e))
+
+    def importConfig(self):
+        jsonPath = QFileDialog.getOpenFileName(self, "选择预设", None, "*.json")[0]
+        if jsonPath:
+            if os.path.getsize(jsonPath):
+                config = {}
+                try:
+                    config = json.loads(open(jsonPath).read())
+                except:
+                    config = {}
+                if config:  # 如果能成功读取到config文件
+                    self.config = config
+                    while len(self.config['player']) < 9:
+                        self.config['player'].append(0)
+                    if type(self.config['roomid']) == list:
+                        roomIDList = self.config['roomid']
+                        self.config['roomid'] = {}
+                        for roomID in roomIDList:
+                            self.config['roomid'][roomID] = False
+                    if 'quality' not in self.config:
+                        self.config['quality'] = [80] * 9
+                    if 'audioChannel' not in self.config:
+                        self.config['audioChannel'] = [0] * 9
+                    if 'translator' not in self.config:
+                        self.config['translator'] = [True] * 9
+                    for index, textSetting in enumerate(self.config['danmu']):
+                        if type(textSetting) == bool:
+                            self.config['danmu'][index] = [textSetting, 20, 1, 7, 0, '【 [ {']
+                    if 'hardwareDecode' not in self.config:
+                        self.config['hardwareDecode'] = True
+                    self.liverPanel.addLiverRoomList(self.config['roomid'].keys())
+                    QMessageBox.information(self, '导入预设', '导入完成', QMessageBox.Ok)
 
     def muteExcept(self):
         for videoWidget in self.videoWidgetList:

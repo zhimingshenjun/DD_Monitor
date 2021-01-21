@@ -54,7 +54,7 @@ class ToolButton(QToolButton):
 
 
 class TextOpation(QWidget):
-    def __init__(self, setting=[20, 2, 6, 0, '【 [ {']):
+    def __init__(self, setting=[20, 1, 7, 0, '【 [ {']):
         super(TextOpation, self).__init__()
         self.resize(300, 300)
         self.setWindowTitle('弹幕窗设置')
@@ -66,12 +66,12 @@ class TextOpation(QWidget):
         layout.addWidget(self.opacitySlider, 0, 1, 1, 1)
         layout.addWidget(QLabel('窗体横向占比'), 1, 0, 1, 1)
         self.horizontalCombobox = QComboBox()
-        self.horizontalCombobox.addItems(['10%', '15%', '20%', '25%', '30%', '35%', '40%', '45%', '50%'])
+        self.horizontalCombobox.addItems(['%d' % x + '%' for x in range(10, 110, 10)])
         self.horizontalCombobox.setCurrentIndex(setting[1])
         layout.addWidget(self.horizontalCombobox, 1, 1, 1, 1)
         layout.addWidget(QLabel('窗体纵向占比'), 2, 0, 1, 1)
         self.verticalCombobox = QComboBox()
-        self.verticalCombobox.addItems(['50%', '55%', '60%', '65%', '70%', '75%', '80%', '85%', '90%', '95%', '100%'])
+        self.verticalCombobox.addItems(['%d' % x + '%' for x in range(10, 110, 10)])
         self.verticalCombobox.setCurrentIndex(setting[2])
         layout.addWidget(self.verticalCombobox, 2, 1, 1, 1)
         layout.addWidget(QLabel('弹幕窗类型'), 3, 0, 1, 1)
@@ -117,7 +117,7 @@ class TextBrowser(QWidget):
         self.textBrowser.setStyleSheet('border-width:1')
         textCursor = self.textBrowser.textCursor()
         textBlockFormat = QTextBlockFormat()
-        textBlockFormat.setLineHeight(16, QTextBlockFormat.FixedHeight)  # 弹幕框行距
+        textBlockFormat.setLineHeight(15, QTextBlockFormat.FixedHeight)  # 弹幕框行距
         textCursor.setBlockFormat(textBlockFormat)
         self.textBrowser.setTextCursor(textCursor)
         layout.addWidget(self.textBrowser, 1, 0, 1, 10)

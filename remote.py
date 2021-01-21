@@ -76,8 +76,8 @@ class remoteThread(QThread):
                 # elif jd['cmd'] == 'COMBO_SEND':
                 #     d = jd['data']
                 #     self.message.emit('%s投喂了%s个%s' % (d['uname'], d['batch_combo_num'], d['gift_name']))
-                elif jd['cmd'] == 'GUARD_BUY':
-                    self.message.emit('%s上了舰长' % jd['data']['username'])
+                # elif jd['cmd'] == 'GUARD_BUY':
+                #     self.message.emit('%s上了舰长' % jd['data']['username'])
             except Exception as e:
                 print(e)
 
