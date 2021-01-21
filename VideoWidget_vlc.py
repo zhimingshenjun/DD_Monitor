@@ -8,7 +8,7 @@ from PyQt5.Qt import *
 from remote import remoteThread
 from danmu import TextBrowser
 import vlc
-
+import platform
 
 header = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'
@@ -217,7 +217,12 @@ class VideoWidget(QFrame):
         self.player = self.instance.media_player_new()  # 视频播放
         self.player.video_set_mouse_input(False)
         self.player.video_set_key_input(False)
-        self.player.set_hwnd(self.videoFrame.winId())
+        if platform.system() == 'Windows':
+            self.player.set_hwnd(self.videoFrame.winId())
+        elif platform.system() == 'Darwin':  # for MacOS
+            self.player.set_nsobject(int(self.videoFrame.winId()))
+        else:
+            self.player.set_xwindow(self.videoFrame.winId())
 
         self.topLabel = QLabel()
         self.topLabel.setFixedHeight(30)
