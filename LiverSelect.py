@@ -187,7 +187,7 @@ class CoverLabel(QLabel):
             self.setStyleSheet('background-color:#708090')  # 灰色背景
         self.titleLabel = OutlinedLabel(fontColor=brush)
         self.layout.addWidget(self.titleLabel, 0, 0, 1, 6)
-        self.roomIDLabel = OutlinedLabel(roomID, fontColor=brush)
+        self.roomIDLabel = OutlinedLabel(str(roomID), fontColor=brush)
         self.layout.addWidget(self.roomIDLabel, 1, 0, 1, 6)
         self.stateLabel = OutlinedLabel(size=13)
         self.stateLabel.setText('检测中')
