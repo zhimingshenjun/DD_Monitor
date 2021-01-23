@@ -164,11 +164,12 @@ class VideoWidget(QFrame):
         self.userPause = False  # 用户暂停
         self.setFrameShape(QFrame.Box)
         self.setObjectName('video')
-        self.setStyleSheet('#video{border-width:1px;border-style:solid;border-color:gray}')
 
         self.top = top
         if top:  # 悬浮窗取消关闭按钮 vlc版点关闭后有bug 让用户右键退出
             self.setWindowFlags(Qt.CustomizeWindowHint | Qt.WindowMinimizeButtonHint | Qt.WindowMaximizeButtonHint)
+        else:
+            self.setStyleSheet('#video{border-width:1px;border-style:solid;border-color:gray}')
         self.textSetting = textSetting
         self.horiPercent = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0][self.textSetting[2]]
         self.vertPercent = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0][self.textSetting[3]]
@@ -187,7 +188,7 @@ class VideoWidget(QFrame):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.textBrowser = TextBrowser(self)  # 必须赶在resizeEvent和moveEvent之前初始化textbrowser
-        self.textBrowser.hide()  # 启动隐藏弹幕机
+        # self.textBrowser.hide()  # 启动隐藏弹幕机
         self.setDanmuOpacity(self.textSetting[1])  # 设置弹幕透明度
         self.textBrowser.optionWidget.opacitySlider.setValue(self.textSetting[1])  # 设置选项页透明条
         self.textBrowser.optionWidget.opacitySlider.value.connect(self.setDanmuOpacity)
@@ -306,10 +307,10 @@ class VideoWidget(QFrame):
         self.horiPercent = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0][index]  # 记录横向占比
         width = self.width() * self.horiPercent
         self.textBrowser.resize(width, self.textBrowser.height())
-        if width > 300:
-            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 20, QFont.Bold))
-            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 20, QFont.Bold))
-        elif 100 < width <= 300:
+        if width > 240:
+            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 17, QFont.Bold))
+            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 17, QFont.Bold))
+        elif 100 < width <= 240:
             self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 5, QFont.Bold))
             self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 5, QFont.Bold))
         else:
@@ -363,7 +364,9 @@ class VideoWidget(QFrame):
         self.moveTextBrowser()
 
     def moveEvent(self, QMoveEvent):  # 理论上给悬浮窗同步弹幕机用的moveEvent 但不生效 但是又不能删掉 不然交换窗口弹幕机有bug
-        self.moveTextBrowser()
+        videoPos = self.mapToGlobal(self.videoFrame.pos())  # videoFrame的坐标要转成globalPos
+        self.textBrowser.move(videoPos + self.textPosDelta)
+        self.textPosDelta = self.textBrowser.pos() - videoPos
 
     def moveTextBrowser(self, point=None):
         videoPos = self.mapToGlobal(self.videoFrame.pos())  # videoFrame的坐标要转成globalPos
@@ -433,7 +436,7 @@ class VideoWidget(QFrame):
     def rightMouseClicked(self, event):
         menu = QMenu()
         openBrowser = menu.addAction('打开直播间')
-        chooseQuality = menu.addMenu('选择画质')
+        chooseQuality = menu.addMenu('选择画质 ►')
         originQuality = chooseQuality.addAction('原画')
         if self.quality == 10000:
             originQuality.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
@@ -446,14 +449,14 @@ class VideoWidget(QFrame):
         lowQuality = chooseQuality.addAction('流畅')
         if self.quality == 80:
             lowQuality.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
-        chooseAudioChannel = menu.addMenu('选择音效')
+        chooseAudioChannel = menu.addMenu('选择音效 ►')
         chooseAudioOrigin = chooseAudioChannel.addAction('原始音效')
         if self.audioChannel == 0:
             chooseAudioOrigin.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
         chooseAudioDolbys = chooseAudioChannel.addAction('杜比音效')
         if self.audioChannel == 5:
             chooseAudioDolbys.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
-        chooseAmplify = menu.addMenu('音量增大')
+        chooseAmplify = menu.addMenu('音量增大 ►')
         chooseAmp_0_5 = chooseAmplify.addAction('x 0.5')
         if self.volumeAmplify == 0.5:
             chooseAmp_0_5.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
@@ -475,7 +478,7 @@ class VideoWidget(QFrame):
         if not self.top:  # 非弹出类悬浮窗
             popWindow = menu.addAction('悬浮窗播放')
         else:
-            opacityMenu = menu.addMenu('调节透明度')
+            opacityMenu = menu.addMenu('调节透明度 ►')
             percent100 = opacityMenu.addAction('100%')
             if self.opacity == 100:
                 percent100.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
@@ -573,8 +576,8 @@ class VideoWidget(QFrame):
         self.textSetting[0] = False
         # self.setDanmu.emit([self.id, False])  # 旧版信号 已弃用
 
-    def closeTranslator(self):
-        self.setTranslator.emit([self.id, False])
+    # def closeTranslator(self):
+    #     self.setTranslator.emit([self.id, False])
 
     def showDanmu(self):
         if self.textBrowser.isHidden():
@@ -636,13 +639,13 @@ class VideoWidget(QFrame):
                 self.getMediaURL.setConfig(self.roomID, self.quality)  # 设置房号和画质
                 self.getMediaURL.start()  # 开始缓存视频
                 self.getMediaURL.checkTimer.start(3000)  # 启动监测定时器
-                self.checkPlaying.start(1500)  # 启动播放卡顿检测定时器
+                self.checkPlaying.start(3000)  # 启动播放卡顿检测定时器
         else:
             self.mediaStop()
 
     def mediaStop(self):
         self.roomID = '0'
-        self.topLabel.setText('    窗口%s  未定义的直播间' % (self.id + 1))
+        self.topLabel.setText(('    窗口%s  未定义的直播间' % (self.id + 1))[:20])  # 限制下直播间标题字数
         self.titleLabel.setText('未定义')
         self.player.stop()
         self.play.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
@@ -697,7 +700,7 @@ class VideoWidget(QFrame):
                 uname = data['anchor_info']['base_info']['uname']
                 if self.liveStatus != 1:
                     uname = '（未开播）' + uname
-        self.topLabel.setText('    窗口%s  %s' % (self.id + 1, title))
+        self.topLabel.setText(('    窗口%s  %s' % (self.id + 1, title))[:20])
         self.titleLabel.setText(uname)
 
     def playDanmu(self, message):

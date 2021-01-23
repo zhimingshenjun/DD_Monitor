@@ -117,7 +117,7 @@ class TextBrowser(QWidget):
         self.textBrowser.setStyleSheet('border-width:1')
         textCursor = self.textBrowser.textCursor()
         textBlockFormat = QTextBlockFormat()
-        textBlockFormat.setLineHeight(15, QTextBlockFormat.FixedHeight)  # 弹幕框行距
+        textBlockFormat.setLineHeight(17, QTextBlockFormat.FixedHeight)  # 弹幕框行距
         textCursor.setBlockFormat(textBlockFormat)
         self.textBrowser.setTextCursor(textCursor)
         layout.addWidget(self.textBrowser, 1, 0, 1, 10)

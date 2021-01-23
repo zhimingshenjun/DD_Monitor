@@ -38,13 +38,22 @@ class Version(QWidget):
         self.resize(350, 150)
         self.setWindowTitle('当前版本')
         layout = QGridLayout(self)
-        layout.addWidget(QLabel('DD监控室 v0.13测试版'), 0, 0, 1, 2)
-        layout.addWidget(QLabel('by 神君Channel'), 1, 0, 1, 1)
+        layout.addWidget(QLabel('DD监控室 v1.0'), 0, 0, 1, 2)
+        layout.addWidget(QLabel('by 神君Channel'), 1, 0, 1, 2)
+        layout.addWidget(QLabel('特别鸣谢：大锅饭 美东矿业'), 2, 0, 1, 2)
         releases_url = QLabel('')
         releases_url.setOpenExternalLinks(True)
         releases_url.setText(_translate("MainWindow", "<html><head/><body><p><a href=\"https://space.bilibili.com/637783\">\
 <span style=\" text-decoration: underline; color:#cccccc;\">https://space.bilibili.com/637783</span></a></p></body></html>", None))
-        layout.addWidget(releases_url, 1, 1, 1, 1)
+        layout.addWidget(releases_url, 1, 1, 1, 2, Qt.AlignRight)
+
+        checkButton = QPushButton('检查更新')
+        checkButton.setFixedHeight(40)
+        checkButton.clicked.connect(self.checkUpdate)
+        layout.addWidget(checkButton, 0, 2, 1, 1)
+
+    def checkUpdate(self):
+        QDesktopServices.openUrl(QUrl(r'https://github.com/zhimingshenjun/DD_Monitor/releases/tag/DD_Monitor'))
 
 
 class HotKey(QWidget):
@@ -135,8 +144,9 @@ class MainWindow(QMainWindow):
                            '12845193': False, '41682': False, '21652717': False, '22571958': False,
                            '21919321': True, '21013446': False},  # 置顶显示
                 'layout': [(0, 0, 1, 1), (0, 1, 1, 1), (1, 0, 1, 1), (1, 1, 1, 1)],
-                'player': ['21396545', '21402309', '22384516', '8792912',
-                           '21696950', '14327465', '704808', '1321846', '318'],
+                # 'player': ['21396545', '21402309', '22384516', '8792912',
+                #            '21696950', '14327465', '704808', '1321846', '318'],
+                'player': ['0'] * 9,
                 'quality': [80] * 9,
                 'audioChannel': [0] * 9,
                 'muted': [1] * 9,
@@ -163,15 +173,15 @@ class MainWindow(QMainWindow):
         for i in range(9):
             volume = self.config['volume'][i]
             self.videoWidgetList.append(VideoWidget(i, volume, cacheFolder, textSetting=self.config['danmu'][i]))
-            self.videoWidgetList[i].mutedChanged.connect(self.mutedChanged)
-            self.videoWidgetList[i].volumeChanged.connect(self.volumeChanged)
+            # self.videoWidgetList[i].mutedChanged.connect(self.mutedChanged)  # 硬盘io过高 屏蔽掉 退出的时候统一保存
+            # self.videoWidgetList[i].volumeChanged.connect(self.volumeChanged)  # 硬盘io过高 屏蔽掉 退出的时候统一保存
             self.videoWidgetList[i].addMedia.connect(self.addMedia)
             self.videoWidgetList[i].deleteMedia.connect(self.deleteMedia)
             self.videoWidgetList[i].exchangeMedia.connect(self.exchangeMedia)
-            self.videoWidgetList[i].setDanmu.connect(self.setDanmu)
-            self.videoWidgetList[i].setTranslator.connect(self.setTranslator)
+            # self.videoWidgetList[i].setDanmu.connect(self.setDanmu)  # 硬盘io过高 屏蔽掉 退出的时候统一保存
+            # self.videoWidgetList[i].setTranslator.connect(self.setTranslator)  # 已废弃
             self.videoWidgetList[i].changeQuality.connect(self.setQuality)
-            self.videoWidgetList[i].changeAudioChannel.connect(self.setAudioChannel)
+            # self.videoWidgetList[i].changeAudioChannel.connect(self.setAudioChannel)  # 硬盘io过高 屏蔽掉 退出的时候统一保存
             self.videoWidgetList[i].popWindow.connect(self.popWindow)
             self.videoWidgetList[i].hideBarKey.connect(self.openControlPanel)
             self.videoWidgetList[i].fullScreenKey.connect(self.fullScreen)
@@ -230,7 +240,7 @@ class MainWindow(QMainWindow):
         self.controlBarToken = self.config['control']
         layoutConfigAction = QAction('布局方式', self, triggered=self.openLayoutSetting)
         self.optionMenu.addAction(layoutConfigAction)
-        globalQualityMenu = self.optionMenu.addMenu('全局画质')
+        globalQualityMenu = self.optionMenu.addMenu('全局画质 ►')
         originQualityAction = QAction('原画', self, triggered=lambda: self.globalQuality(10000))
         globalQualityMenu.addAction(originQualityAction)
         bluerayQualityAction = QAction('蓝光', self, triggered=lambda: self.globalQuality(400))
@@ -239,12 +249,12 @@ class MainWindow(QMainWindow):
         globalQualityMenu.addAction(highQualityAction)
         lowQualityAction = QAction('流畅', self, triggered=lambda: self.globalQuality(80))
         globalQualityMenu.addAction(lowQualityAction)
-        globalAudioMenu = self.optionMenu.addMenu('全局音效')
+        globalAudioMenu = self.optionMenu.addMenu('全局音效 ►')
         audioOriginAction = QAction('原始音效', self, triggered=lambda: self.globalAudioChannel(0))
         globalAudioMenu.addAction(audioOriginAction)
         audioDolbysAction = QAction('杜比音效', self, triggered=lambda: self.globalAudioChannel(5))
         globalAudioMenu.addAction(audioDolbysAction)
-        hardDecodeMenu = self.optionMenu.addMenu('解码方案')
+        hardDecodeMenu = self.optionMenu.addMenu('解码方案 ►')
         hardDecodeAction = QAction('硬解', self, triggered=lambda: self.setDecode(True))
         hardDecodeMenu.addAction(hardDecodeAction)
         softDecodeAction = QAction('软解', self, triggered=lambda: self.setDecode(False))
@@ -259,11 +269,11 @@ class MainWindow(QMainWindow):
         self.optionMenu.addAction(importConfig)
 
         self.versionMenu = self.menuBar().addMenu('帮助')
-        bilibiliAction = QAction('B站', self, triggered=self.openBilibili)
+        bilibiliAction = QAction('B站视频', self, triggered=self.openBilibili)
         self.versionMenu.addAction(bilibiliAction)
         hotKeyAction = QAction('快捷键', self, triggered=self.openHotKey)
         self.versionMenu.addAction(hotKeyAction)
-        versionAction = QAction('当前版本', self, triggered=self.openVersion)
+        versionAction = QAction('检查版本', self, triggered=self.openVersion)
         self.versionMenu.addAction(versionAction)
 
         self.payMenu = self.menuBar().addMenu('开源和投喂')
@@ -401,7 +411,7 @@ class MainWindow(QMainWindow):
         for videoWidget in self.videoWidgetList:
             videoWidget.mediaMute(force)
         self.config['muted'] = [force] * 9
-        self.dumpConfig.start()
+        # self.dumpConfig.start()
 
     def globalSetVolume(self, value):
         for videoWidget in self.videoWidgetList:
@@ -410,7 +420,7 @@ class MainWindow(QMainWindow):
             videoWidget.slider.setValue(value)
         self.config['volume'] = [value] * 9
         self.config['globalVolume'] = value
-        self.dumpConfig.start()
+        # self.dumpConfig.start()
 
     def globalMediaStop(self):
         for videoWidget in self.videoWidgetList:
@@ -429,7 +439,7 @@ class MainWindow(QMainWindow):
             videoWidget.audioChannel = audioChannel
             videoWidget.player.audio_set_channel(audioChannel)
         self.config['audioChannel'] = [audioChannel] * 9
-        self.dumpConfig.start()
+        # self.dumpConfig.start()
 
     def setDecode(self, hardwareDecodeToken):
         for videoWidget in self.videoWidgetList:
@@ -441,7 +451,7 @@ class MainWindow(QMainWindow):
         self.controlBar.hide() if self.controlBarToken else self.controlBar.show()
         self.controlBarToken = not self.controlBarToken
         self.config['control'] = self.controlBarToken
-        self.dumpConfig.start()
+        # self.dumpConfig.start()
 
     def openVersion(self):
         self.version.hide()
@@ -530,7 +540,8 @@ class MainWindow(QMainWindow):
             y, x, h, w = layout
             videoWidget = self.videoWidgetList[index]
             videoWidget.show()
-            videoWidget.textBrowser.show()
+            if videoWidget.textSetting[0]:  # 显示弹幕
+                videoWidget.textBrowser.show()
             self.mainLayout.addWidget(videoWidget, y, x, h, w)
             if videoWidget.roomID != '0':
                 videoWidget.mediaPlay(2)  # 显示的窗口播放
@@ -549,6 +560,7 @@ class MainWindow(QMainWindow):
                 self.showNormal()
             self.optionMenu.menuAction().setVisible(True)
             self.versionMenu.menuAction().setVisible(True)
+            self.payMenu.menuAction().setVisible(True)
             if self.controlBarToken:
                 self.controlBar.show()
         else:  # 全屏
@@ -557,6 +569,7 @@ class MainWindow(QMainWindow):
             self.maximumToken = self.isMaximized()
             self.optionMenu.menuAction().setVisible(False)
             self.versionMenu.menuAction().setVisible(False)
+            self.payMenu.menuAction().setVisible(False)
             if self.controlBarToken:
                 self.controlBar.hide()
             for videoWidget in self.videoWidgetList:

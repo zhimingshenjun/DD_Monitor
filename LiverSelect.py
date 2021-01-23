@@ -82,6 +82,17 @@ class CircleImage(QWidget):
             painter.drawRoundedRect(self.rect(), self.width() / 2, self.height() / 2)
 
 
+class PushButton(QPushButton):
+    def __init__(self, name, pushToken=False):
+        super().__init__()
+        self.setText(name)
+        self.pushToken = pushToken
+        if self.pushToken:
+            self.setStyleSheet('background-color:#3daee9;border-width:1px')
+        else:
+            self.setStyleSheet('background-color:#31363b;border-width:1px')
+
+
 class RequestAPI(QThread):
     data = pyqtSignal(dict)
 
@@ -263,7 +274,7 @@ class CoverLabel(QLabel):
             drag.exec_()
         elif QMouseEvent.button() == Qt.RightButton:
             menu = QMenu()
-            addTo = menu.addMenu('添加至窗口>')
+            addTo = menu.addMenu('添加至窗口 ►')
             addWindow = []
             for win in range(1, 10):
                 addWindow.append(addTo.addAction('窗口%s' % win))
@@ -334,12 +345,16 @@ class GetHotLiver(QThread):
         try:
             roomInfoSummary = []
             for p in range(1, 6):
-                r = requests.get('https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?platform=web&parent_area_id=9&page=%s' % p)
-                data = json.loads(r.text)['data']['list']
-                if data:
-                    for info in data:
-                        roomInfoSummary.append([info['uname'], info['title'], str(info['roomid'])])
-                time.sleep(0.1)
+                pageSummary = []
+                for area in [9, 2, 3, 6, 1]:
+                    api = 'https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?platform=web&parent_area_id=%s&page=%s' % (area, p)
+                    r = requests.get(api)
+                    data = json.loads(r.text)['data']['list']
+                    if data:
+                        for info in data:
+                            pageSummary.append([info['uname'], info['title'], str(info['roomid'])])
+                    time.sleep(0.1)
+                roomInfoSummary.append(pageSummary)
             if roomInfoSummary:
                 self.roomInfoSummary.emit(roomInfoSummary)
         except:
@@ -379,6 +394,31 @@ class GetFollows(QThread):
                 self.roomInfoSummary.emit(roomIDList)
 
 
+class DownloadVTBList(QThread):
+    vtbList = pyqtSignal(list)
+
+    def __init__(self, parent=None):
+        super(DownloadVTBList, self).__init__(parent)
+
+    def run(self):
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36'}
+            r = requests.get(r'https://github.com/zhimingshenjun/DD_Monitor/blob/master/utils/vtb.csv', headers=headers)
+            vtbList = []
+            html = r.text.split('\n')
+            for cnt, line in enumerate(html):
+                if 'blob-num js-line-number' in line:
+                    vtbID = html[cnt + 1].split('>')[1].split('<')[0]
+                    roomID = html[cnt + 2].split('>')[1].split('<')[0]
+                    haco = html[cnt + 3].split('>')[1].split('<')[0]
+                    vtbList.append('%s,%s,%s\n' % (vtbID, roomID, haco))
+            if vtbList:
+                self.vtbList.emit(vtbList)
+        except Exception as e:
+            print(str(e))
+
+
 class AddLiverRoomWidget(QWidget):
     roomList = pyqtSignal(list)
 
@@ -386,7 +426,7 @@ class AddLiverRoomWidget(QWidget):
         super(AddLiverRoomWidget, self).__init__()
         self.resize(600, 900)
         self.setWindowTitle('添加直播间（房号太多的话尽量分批次添加 避免卡死）')
-        self.hotLiverList = []
+        self.hotLiverDict = {0: [], 1: [], 2: [], 3: [], 4: [], 5: []}
         self.followLiverList = []
         layout = QGridLayout(self)
         layout.addWidget(QLabel('请输入B站直播间房号 多个房号之间用空格隔开'), 0, 0, 1, 4)
@@ -404,6 +444,28 @@ class AddLiverRoomWidget(QWidget):
         hotLiverPage = QWidget()
         hotLiverLayout = QGridLayout(hotLiverPage)
         hotLiverLayout.setContentsMargins(1, 1, 1, 1)
+
+        self.virtual = PushButton('虚拟主播', True)
+        self.virtual.clicked.connect(lambda: self.switchHotLiver(0))
+        hotLiverLayout.addWidget(self.virtual, 0, 0, 1, 1)
+        self.onlineGame = PushButton('网游')
+        self.onlineGame.clicked.connect(lambda: self.switchHotLiver(1))
+        hotLiverLayout.addWidget(self.onlineGame, 0, 1, 1, 1)
+        self.mobileGame = PushButton('手游')
+        self.mobileGame.clicked.connect(lambda: self.switchHotLiver(2))
+        hotLiverLayout.addWidget(self.mobileGame, 0, 2, 1, 1)
+        self.consoleGame = PushButton('单机')
+        self.consoleGame.clicked.connect(lambda: self.switchHotLiver(3))
+        hotLiverLayout.addWidget(self.consoleGame, 0, 3, 1, 1)
+        self.entertainment = PushButton('娱乐')
+        self.entertainment.clicked.connect(lambda: self.switchHotLiver(4))
+        hotLiverLayout.addWidget(self.entertainment, 0, 4, 1, 1)
+        # self.broadcasting = PushButton('电台')
+        # self.broadcasting.clicked.connect(lambda: self.switchHotLiver(5))
+        # hotLiverLayout.addWidget(self.broadcasting, 0, 5, 1, 1)
+        self.buttonList = [self.virtual, self.onlineGame, self.mobileGame, self.consoleGame, self.entertainment]
+        self.currentPage = 0
+
         self.hotLiverTable = QTableWidget()
         self.hotLiverTable.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.hotLiverTable.verticalScrollBar().installEventFilter(self)
@@ -415,7 +477,7 @@ class AddLiverRoomWidget(QWidget):
         self.hotLiverTable.setColumnWidth(0, 130)
         self.hotLiverTable.setColumnWidth(1, 240)
         self.hotLiverTable.setColumnWidth(2, 130)
-        hotLiverLayout.addWidget(self.hotLiverTable)
+        hotLiverLayout.addWidget(self.hotLiverTable, 1, 0, 1, 5)
         self.getHotLiver = GetHotLiver()
         self.getHotLiver.roomInfoSummary.connect(self.collectHotLiverInfo)
 
@@ -473,24 +535,64 @@ class AddLiverRoomWidget(QWidget):
         except Exception as e:
             print(str(e))
         self.hacoTable.setHorizontalHeaderLabels(['主播名', '直播间房号', '所属'])
-        self.hacoTable.setColumnWidth(0, 130)
-        self.hacoTable.setColumnWidth(1, 130)
-        self.hacoTable.setColumnWidth(2, 200)
+        self.hacoTable.setColumnWidth(0, 160)
+        self.hacoTable.setColumnWidth(1, 160)
+        self.hacoTable.setColumnWidth(2, 160)
         hacoLayout.addWidget(self.hacoTable)
+        self.downloadVTBList = DownloadVTBList()
+        self.downloadVTBList.vtbList.connect(self.collectVTBList)
+        self.downloadVTBList.start()
 
         tab.addTab(hotLiverPage, '正在直播')
         tab.addTab(hacoPage, '个人势/箱')
         tab.addTab(followsPage, '关注添加')
 
     def collectHotLiverInfo(self, info):
-        self.hotLiverList = []
-        for y, line in enumerate(info):
-            self.hotLiverList.append(line[2])
-            for x, txt in enumerate(line):
-                try:
-                    self.hotLiverTable.setItem(y, x, QTableWidgetItem(txt))
-                except:
-                    pass
+        self.hotLiverDict = {}
+        for page, hotLiverList in enumerate(info):
+            self.hotLiverDict[page] = hotLiverList
+            for y, line in enumerate(hotLiverList):
+                for x, txt in enumerate(line):
+                    if page == self.currentPage:
+                        try:
+                            self.hotLiverTable.setItem(y, x, QTableWidgetItem(txt))
+                        except:
+                            pass
+
+    def switchHotLiver(self, index):
+        if not self.buttonList[index].pushToken:
+            self.currentPage = index
+            for cnt, button in enumerate(self.buttonList):
+                if cnt == index:  # 点击的按钮
+                    button.pushToken = True
+                    button.setStyleSheet('background-color:#3daee9;border-width:1px')
+                else:
+                    button.pushToken = False
+                    button.setStyleSheet('background-color:#31363b;border-width:1px')
+            self.hotLiverTable.clear()
+            self.hotLiverTable.setColumnCount(3)
+            self.hotLiverTable.setRowCount(100)
+            self.hotLiverTable.setVerticalHeaderLabels(['添加'] * 100)
+            self.hotLiverTable.setHorizontalHeaderLabels(['主播名', '直播间标题', '直播间房号'])
+            self.hotLiverTable.setColumnWidth(0, 130)
+            self.hotLiverTable.setColumnWidth(1, 240)
+            self.hotLiverTable.setColumnWidth(2, 130)
+            hotLiverList = self.hotLiverDict[index]
+            for y, line in enumerate(hotLiverList):
+                for x, txt in enumerate(line):
+                    try:
+                        self.hotLiverTable.setItem(y, x, QTableWidgetItem(txt))
+                    except:
+                        pass
+
+    def collectVTBList(self, vtbList):
+        try:
+            vtbs = codecs.open('utils/vtb.csv', 'w', 'utf_8')
+            for line in vtbList:
+                vtbs.write(line)
+            vtbs.close()
+        except Exception as e:
+            print(str(e))
 
     def sendSelectedRoom(self):
         tmpList = self.roomEdit.text().strip().replace('\t', ' ').split(' ')
@@ -504,13 +606,14 @@ class AddLiverRoomWidget(QWidget):
 
     def hotLiverAdd(self, row):
         try:
-            roomID = self.hotLiverList[row]
+            hotLiverList = self.hotLiverDict[self.currentPage]
+            roomID = hotLiverList[row][2]
             addedRoomID = self.roomEdit.text()
             if roomID not in addedRoomID:
                 addedRoomID += ' %s' % roomID
                 self.roomEdit.setText(addedRoomID)
-        except:
-            pass
+        except Exception as e:
+            print(str(e))
 
     def hacoAdd(self, row):
         try:
@@ -650,6 +753,7 @@ class LiverPanel(QWidget):
 
     def refreshRoomPanel(self, liverInfo):  # 异步刷新图卡
         roomIDToRefresh = []
+        firstRefresh = False
         for index, info in enumerate(liverInfo):
             if info[0]:  # uid有效
                 for cover in self.coverList:
@@ -665,6 +769,7 @@ class LiverPanel(QWidget):
                         cover.updateLabel(info)  # 更新数据
                 if info[1] not in self.oldLiveStatus:  # 软件启动后第一次更新添加
                     self.oldLiveStatus[info[1]] = info[4]  # 房号: 直播状态
+                    firstRefresh = True  # 第一次刷新
                 elif self.oldLiveStatus[info[1]] != info[4]:  # 状态发生变化
                     roomIDToRefresh.append(info[1])  # 发送给主界面要刷新的房间号
                     self.oldLiveStatus[info[1]] = info[4]  # 更新旧的直播状态列表
@@ -674,7 +779,10 @@ class LiverPanel(QWidget):
                         cover.updateLabel(info)
         if roomIDToRefresh:
             self.refreshIDList.emit(roomIDToRefresh)
-        self.refreshPanel()
+            self.refreshPanel()  # 修改刷新策略 只有当有主播直播状态发生变化后才会刷新 降低闪退风险
+        elif firstRefresh:
+            self.refreshPanel()
+        # self.refreshPanel()
 
     def addCoverToPlayer(self, info):
         self.addToWindow.emit(info)
