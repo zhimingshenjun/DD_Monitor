@@ -275,6 +275,11 @@ class MainWindow(QMainWindow):
         self.versionMenu.addAction(hotKeyAction)
         versionAction = QAction('检查版本', self, triggered=self.openVersion)
         self.versionMenu.addAction(versionAction)
+        otherDDMenu = self.versionMenu.addMenu('其他DD系列工具 ►')
+        DDSubtitleAction = QAction('DD烤肉机', self, triggered=self.openDDSubtitle)
+        otherDDMenu.addAction(DDSubtitleAction)
+        DDThanksAction = QAction('DD答谢机', self, triggered=self.openDDThanks)
+        otherDDMenu.addAction(DDThanksAction)
 
         self.payMenu = self.menuBar().addMenu('开源和投喂')
         githubAction = QAction('GitHub', self, triggered=self.openGithub)
@@ -286,7 +291,7 @@ class MainWindow(QMainWindow):
         self.hideMouseCnt = 90
         self.mouseTrackTimer = QTimer()
         self.mouseTrackTimer.timeout.connect(self.checkMousePos)
-        self.mouseTrackTimer.start(500)  # 0.5s检测一次
+        self.mouseTrackTimer.start(100)  # 0.1s检测一次
 
     def setPlayer(self):
         for index, layoutConfig in enumerate(self.config['layout']):
@@ -327,17 +332,17 @@ class MainWindow(QMainWindow):
         fromVideo.id, toVideo.id = toID, fromID  # 交换id
         fromVideo.topLabel.setText(fromVideo.topLabel.text().replace('窗口%s' % (fromID + 1), '窗口%s' % (toID + 1)))
         toVideo.topLabel.setText(toVideo.topLabel.text().replace('窗口%s' % (toID + 1), '窗口%s' % (fromID + 1)))
-        fromMuted, toMuted = self.config['muted'][fromID], self.config['muted'][toID]  # 获取原来的静音设置
-        fromVolume, toVolume = self.config['volume'][fromID], self.config['volume'][toID]  # 获取原来的音量
+        # fromMuted, toMuted = self.config['muted'][fromID], self.config['muted'][toID]  # 获取原来的静音设置
+        # fromVolume, toVolume = self.config['volume'][fromID], self.config['volume'][toID]  # 获取原来的音量
         fromVideoPos = fromVideo.mapToGlobal(fromVideo.videoFrame.pos())  # 保持弹幕框相对位置
         toVideoPos = toVideo.mapToGlobal(toVideo.videoFrame.pos())
         fromTextDelta, toTextDelta = fromVideo.textPosDelta, toVideo.textPosDelta
         fromVideo.textBrowser.move(toVideoPos + fromTextDelta)
         toVideo.textBrowser.move(fromVideoPos + toTextDelta)
-        fromVideo.mediaMute(toMuted)  # 交换静音设置
-        fromVideo.setVolume(toVolume)  # 交换音量
-        toVideo.mediaMute(fromMuted)
-        toVideo.setVolume(fromVolume)
+        # fromVideo.mediaMute(toMuted)  # 交换静音设置
+        # fromVideo.setVolume(toVolume)  # 交换音量
+        # toVideo.mediaMute(fromMuted)
+        # toVideo.setVolume(fromVolume)
         self.videoWidgetList[fromID], self.videoWidgetList[toID] = toVideo, fromVideo  # 交换控件列表
         self.config['player'][toID] = fromRoomID  # 记录config
         self.config['player'][fromID] = toRoomID
@@ -463,6 +468,12 @@ class MainWindow(QMainWindow):
     def openBilibili(self):
         QDesktopServices.openUrl(QUrl(r'https://www.bilibili.com/video/BV1yo4y1d7iP'))
 
+    def openDDSubtitle(self):
+        QDesktopServices.openUrl(QUrl(r'https://www.bilibili.com/video/BV1p5411b7o7'))
+
+    def openDDThanks(self):
+        QDesktopServices.openUrl(QUrl(r'https://www.bilibili.com/video/BV1Di4y1L7T2'))
+
     def openHotKey(self):
         self.hotKey.hide()
         self.hotKey.show()
@@ -478,7 +489,7 @@ class MainWindow(QMainWindow):
         if newMousePos != self.oldMousePos:
             self.setCursor(Qt.ArrowCursor)  # 鼠标动起来就显示
             self.oldMousePos = newMousePos
-            self.hideMouseCnt = 4  # 刷新隐藏鼠标的间隔
+            self.hideMouseCnt = 20  # 刷新隐藏鼠标的间隔
         if self.hideMouseCnt > 0:
             self.hideMouseCnt -= 1
         else:
@@ -670,12 +681,15 @@ if __name__ == '__main__':
         pass
     cacheFolder = os.path.join(application_path, 'cache/%d' % time.time())  # 初始化缓存文件夹
     os.mkdir(cacheFolder)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     app = QApplication(sys.argv)
     splash = QSplashScreen(QPixmap(os.path.join(application_path, 'utils/splash.jpg')))
     splash.show()
     with open(os.path.join(application_path, 'utils/qdark.qss'), 'r') as f:
         qss = f.read()
     app.setStyleSheet(qss)
+    app.setFont(QFont('微软雅黑', 9))
     mainWindow = MainWindow(cacheFolder)
     mainWindow.showMaximized()
     mainWindow.show()

@@ -3,7 +3,7 @@ DD监控室最重要的模块之一 视频播放窗口 现已全部从QMediaPlay
 包含视频缓存播放、音量管理、弹幕窗
 遇到不确定的播放状态就调用MediaReload()函数 我已经在里面写好了全部的处理 会自动获取直播间状态并进行对应的刷新操作
 '''
-import requests, json, os, time
+import requests, json, os, time, shutil
 from PyQt5.Qt import *
 from remote import remoteThread
 from danmu import TextBrowser
@@ -129,6 +129,33 @@ class VideoFrame(QFrame):
         self.doubleClicked.emit()
 
 
+class ExportCache(QThread):
+    finish = pyqtSignal(list)
+
+    def __init__(self):
+        super(ExportCache, self).__init__()
+        self.ori = ''
+        self.dst = ''
+
+    def setArgs(self, ori, dst):
+        self.ori, self.dst = ori, dst
+
+    def run(self):
+        try:
+            shutil.copy(self.ori, self.dst)
+            self.finish.emit([True, self.dst])  # 导出成功
+        except Exception as e:  # 导出失败
+            print(e)
+            self.finish.emit([False, self.dst])
+
+
+class ExportTip(QWidget):
+    def __init__(self):
+        super(ExportTip, self).__init__()
+        self.resize(600, 100)
+        # self.setWindowTitle('导出缓存中')
+
+
 class VideoWidget(QFrame):
     mutedChanged = pyqtSignal(list)
     volumeChanged = pyqtSignal(list)
@@ -149,6 +176,8 @@ class VideoWidget(QFrame):
         self.setAcceptDrops(True)
         self.installEventFilter(self)
         self.id = id
+        self.title = '未定义的直播间'
+        self.uname = '未定义'
         self.hoverToken = False
         self.roomID = '0'  # 初始化直播间房号
         self.liveStatus = 0  # 初始化直播状态为0
@@ -162,6 +191,7 @@ class VideoWidget(QFrame):
         self.rightButtonPress = False
         self.fullScreen = False
         self.userPause = False  # 用户暂停
+        self.cacheName = ''
         self.setFrameShape(QFrame.Box)
         self.setObjectName('video')
 
@@ -274,6 +304,10 @@ class VideoWidget(QFrame):
         self.getMediaURL.downloadError.connect(self.mediaReload)
 
         self.danmu = remoteThread(self.roomID)
+
+        self.exportCache = ExportCache()
+        self.exportCache.finish.connect(self.exportFinish)
+        self.exportTip = ExportTip()
 
         self.moveTimer = QTimer()
         self.moveTimer.timeout.connect(self.initTextPos)
@@ -435,6 +469,7 @@ class VideoWidget(QFrame):
 
     def rightMouseClicked(self, event):
         menu = QMenu()
+        exportCache = menu.addAction('导出视频缓存')
         openBrowser = menu.addAction('打开直播间')
         chooseQuality = menu.addMenu('选择画质 ►')
         originQuality = chooseQuality.addAction('原画')
@@ -497,7 +532,18 @@ class VideoWidget(QFrame):
             fullScreen = menu.addAction('退出全屏') if self.isFullScreen() else menu.addAction('全屏')
             exit = menu.addAction('退出')
         action = menu.exec_(self.mapToGlobal(event.pos()))
-        if action == openBrowser:
+        if action == exportCache:
+            if self.cacheName and os.path.exists(self.cacheName):
+                saveName = '%s_%s' % (self.uname, self.title)
+                savePath = QFileDialog.getSaveFileName(self, "选择保存路径", saveName, "*.flv")[0]
+                if savePath:  # 保存路径有效
+                    self.exportCache.setArgs(self.cacheName, savePath)
+                    self.exportCache.start()
+                    self.exportTip.setWindowTitle('导出缓存至%s' % savePath)
+                    self.exportTip.show()
+            else:
+                QMessageBox.information(self, '导出失败', '未检测到有效缓存\n%s' % self.cacheName, QMessageBox.Ok)
+        elif action == openBrowser:
             if self.roomID != '0':
                 QDesktopServices.openUrl(QUrl(r'https://live.bilibili.com/%s' % self.roomID))
         elif action == originQuality:
@@ -565,6 +611,13 @@ class VideoWidget(QFrame):
                 self.hide()
                 self.mediaStop()
                 self.textBrowser.hide()
+
+    def exportFinish(self, result):
+        self.exportTip.hide()
+        if result[0]:
+            QMessageBox.information(self, '导出完成', result[1], QMessageBox.Ok)
+        else:
+            QMessageBox.information(self, '导出失败', result[1], QMessageBox.Ok)
 
     def setVolume(self, value):
         self.player.audio_set_volume(int(value * self.volumeAmplify))
@@ -662,6 +715,7 @@ class VideoWidget(QFrame):
         self.danmu.wait()
 
     def setMedia(self, cacheName):
+        self.cacheName = cacheName
         self.play.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
         self.danmu.setRoomID(self.roomID)
         try:
@@ -682,26 +736,26 @@ class VideoWidget(QFrame):
 
     def setTitle(self):
         if self.roomID == '0':
-            title = '未定义的直播间'
-            uname = '未定义'
+            self.title = '未定义的直播间'
+            self.uname = '未定义'
         else:
             r = requests.get(r'https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=%s' % self.roomID)
             data = json.loads(r.text)
             if data['message'] == '房间已加密':
-                title = '房间已加密'
-                uname = '房号: %s' % self.roomID
+                self.title = '房间已加密'
+                self.uname = '房号: %s' % self.roomID
             elif not data['data']:
-                title = '房间好像不见了-_-？'
-                uname = '未定义'
+                self.title = '房间好像不见了-_-？'
+                self.uname = '未定义'
             else:
                 data = data['data']
                 self.liveStatus = data['room_info']['live_status']
-                title = data['room_info']['title']
-                uname = data['anchor_info']['base_info']['uname']
+                self.title = data['room_info']['title']
+                self.uname = data['anchor_info']['base_info']['uname']
                 if self.liveStatus != 1:
-                    uname = '（未开播）' + uname
-        self.topLabel.setText(('    窗口%s  %s' % (self.id + 1, title))[:20])
-        self.titleLabel.setText(uname)
+                    self.uname = '（未开播）' + self.uname
+        self.topLabel.setText(('    窗口%s  %s' % (self.id + 1, self.title))[:20])
+        self.titleLabel.setText(self.uname)
 
     def playDanmu(self, message):
         token = False

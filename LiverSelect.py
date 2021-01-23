@@ -107,7 +107,7 @@ class RequestAPI(QThread):
 
 class RecordThread(QThread):
     downloadTimer = pyqtSignal(str)
-    downloadError = pyqtSignal()
+    downloadError = pyqtSignal(str)
 
     def __init__(self, roomID):
         super(RecordThread, self).__init__()
@@ -125,7 +125,7 @@ class RecordThread(QThread):
                 self.downloadTimer.emit('%dmin' % (self.downloadTime / 60))
             self.downloadTime += 3
         else:
-            self.downloadError.emit()
+            self.downloadError.emit(self.roomID)
 
     def setSavePath(self, savePath):
         self.savePath = savePath
@@ -211,6 +211,7 @@ class CoverLabel(QLabel):
 
         self.recordThread = RecordThread(roomID)
         self.recordThread.downloadTimer.connect(self.refreshStateLabel)
+        self.recordThread.downloadError.connect(self.recordError)
 
     def updateLabel(self, info):
         if not info[0]:  # 用户或直播间不存在
@@ -255,6 +256,9 @@ class CoverLabel(QLabel):
             else:
                 self.stateLabel.setBrush(QColor('#FF6A6A'))  # 未开播为红色字体
                 self.stateLabel.setText('· 未开播')
+
+    def recordError(self, roomID):
+        QMessageBox.information(self, '录制中止', '%s 录制结束 请检查网络或主播是否掉线' % roomID, QMessageBox.Ok)
 
     def updateProfile(self, img):
         self.profile.set_image(img)
@@ -323,10 +327,12 @@ class CoverLabel(QLabel):
                                 self.refreshStateLabel()
                     elif self.recordState == 1:  # 录制中→取消录制
                         self.recordState = 0  # 取消录制
+                        self.recordThread.checkTimer.stop()
                         self.recordThread.recordToken = False  # 设置录像线程标志位让它自行退出结束
                         self.refreshStateLabel()
                     elif self.recordState == 2:  # 等待录制→取消录制
                         self.recordState = 0  # 取消录制
+                        self.recordThread.checkTimer.stop()
                         self.refreshStateLabel()
             else:
                 for index, i in enumerate(addWindow):
@@ -344,9 +350,9 @@ class GetHotLiver(QThread):
     def run(self):
         try:
             roomInfoSummary = []
-            for p in range(1, 6):
+            for area in [9, 2, 3, 6, 1]:
                 pageSummary = []
-                for area in [9, 2, 3, 6, 1]:
+                for p in range(1, 6):
                     api = 'https://api.live.bilibili.com/xlive/web-interface/v1/second/getList?platform=web&parent_area_id=%s&page=%s' % (area, p)
                     r = requests.get(api)
                     data = json.loads(r.text)['data']['list']
@@ -700,6 +706,7 @@ class LiverPanel(QWidget):
 
     def __init__(self, roomIDDict):
         super(LiverPanel, self).__init__()
+        self.refreshCount = 0
         self.oldLiveStatus = {}
         self.addLiverRoomWidget = AddLiverRoomWidget()
         self.addLiverRoomWidget.roomList.connect(self.addLiverRoomList)
@@ -752,6 +759,7 @@ class LiverPanel(QWidget):
         self.dumpConfig.emit()  # 发送保存config信号
 
     def refreshRoomPanel(self, liverInfo):  # 异步刷新图卡
+        self.refreshCount += 1  # 刷新计数+1
         roomIDToRefresh = []
         firstRefresh = False
         for index, info in enumerate(liverInfo):
@@ -781,6 +789,8 @@ class LiverPanel(QWidget):
             self.refreshIDList.emit(roomIDToRefresh)
             self.refreshPanel()  # 修改刷新策略 只有当有主播直播状态发生变化后才会刷新 降低闪退风险
         elif firstRefresh:
+            self.refreshPanel()
+        elif not self.refreshCount % 6:  # 每20s x 6 = 2分钟强制刷新一次
             self.refreshPanel()
         # self.refreshPanel()
 
