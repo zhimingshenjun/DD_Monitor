@@ -681,8 +681,8 @@ if __name__ == '__main__':
         pass
     cacheFolder = os.path.join(application_path, 'cache/%d' % time.time())  # 初始化缓存文件夹
     os.mkdir(cacheFolder)
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    # QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+    # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     app = QApplication(sys.argv)
     splash = QSplashScreen(QPixmap(os.path.join(application_path, 'utils/splash.jpg')))
     splash.show()

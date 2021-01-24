@@ -258,6 +258,7 @@ class CoverLabel(QLabel):
                 self.stateLabel.setText('· 未开播')
 
     def recordError(self, roomID):
+        self.recordThread.checkTimer.stop()
         QMessageBox.information(self, '录制中止', '%s 录制结束 请检查网络或主播是否掉线' % roomID, QMessageBox.Ok)
 
     def updateProfile(self, img):
