@@ -425,6 +425,26 @@ class DownloadVTBList(QThread):
             print(str(e))
 
 
+class HotLiverTable(QTableWidget):
+    addToWindow = pyqtSignal(list)
+
+    def __init__(self):
+        super().__init__()
+        
+    def contextMenuEvent(self, event):
+        self.menu = QMenu(self)
+        addTo = self.menu.addMenu('添加至窗口 ►')
+        addWindow = []
+        for win in range(1, 10):
+            addWindow.append(addTo.addAction('窗口%s' % win))
+        action = self.menu.exec_(self.mapToGlobal(event.pos()))
+        for index, i in enumerate(addWindow):
+            if action == i:
+                text=self.item(self.currentRow(), 2).text()
+                self.addToWindow.emit([index, text]) 
+                break
+
+
 class AddLiverRoomWidget(QWidget):
     roomList = pyqtSignal(list)
 
@@ -472,7 +492,7 @@ class AddLiverRoomWidget(QWidget):
         self.buttonList = [self.virtual, self.onlineGame, self.mobileGame, self.consoleGame, self.entertainment]
         self.currentPage = 0
 
-        self.hotLiverTable = QTableWidget()
+        self.hotLiverTable = HotLiverTable()
         self.hotLiverTable.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.hotLiverTable.verticalScrollBar().installEventFilter(self)
         self.hotLiverTable.verticalHeader().sectionClicked.connect(self.hotLiverAdd)
@@ -710,6 +730,7 @@ class LiverPanel(QWidget):
         self.oldLiveStatus = {}
         self.addLiverRoomWidget = AddLiverRoomWidget()
         self.addLiverRoomWidget.roomList.connect(self.addLiverRoomList)
+        self.addLiverRoomWidget.hotLiverTable.addToWindow.connect(self.addCoverToPlayer)
         self.layout = QHBoxLayout(self)
         self.layout.setSpacing(5)
         self.layout.setContentsMargins(2, 2, 2, 2)
