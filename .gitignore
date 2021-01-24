@@ -5,3 +5,9 @@ build/
 dist/
 venv/
 .DS_Store
+*.build/
+*.dist/
+config_*.json
+config.json
+.idea
+!utils/config_default.json
