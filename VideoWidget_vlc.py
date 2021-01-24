@@ -455,6 +455,7 @@ class VideoWidget(QFrame):
         mimeData.setText('exchange:%s:%s' % (self.id, self.roomID))
         drag.setMimeData(mimeData)
         drag.exec_()
+        print('drag exchange:%s:%s' % (self.id, self.roomID))
 
     def dragEnterEvent(self, QDragEnterEvent):
         QDragEnterEvent.accept()
@@ -463,6 +464,7 @@ class VideoWidget(QFrame):
         if QDropEvent.mimeData().hasText:
             text = QDropEvent.mimeData().text()  # 拖拽事件
             if 'roomID' in text:  # 从cover拖拽新直播间
+                self.stopDanmuMessage()
                 self.roomID = text.split(':')[1]
                 self.addMedia.emit([self.id, self.roomID])
                 self.mediaReload()
@@ -638,6 +640,13 @@ class VideoWidget(QFrame):
 
     # def closeTranslator(self):
     #     self.setTranslator.emit([self.id, False])
+
+    def stopDanmuMessage(self):
+        try:
+            self.danmu.message.disconnect(self.playDanmu)
+        except:
+            pass
+        self.danmu.terminate()
 
     def showDanmu(self):
         if self.textBrowser.isHidden():
