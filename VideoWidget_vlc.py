@@ -56,7 +56,7 @@ class GetMediaURL(QThread):
     cacheName = pyqtSignal(str)
     downloadError = pyqtSignal()
 
-    def __init__(self, id, cacheFolder):
+    def __init__(self, id, cacheFolder, maxCacheSize):
         super(GetMediaURL, self).__init__()
         self.id = id
         self.cacheFolder = cacheFolder
@@ -64,6 +64,7 @@ class GetMediaURL(QThread):
         self.recordToken = False
         self.quality = 250
         self.downloadToken = False
+        self.maxCacheSize = maxCacheSize
         self.checkTimer = QTimer()
         self.checkTimer.timeout.connect(self.checkDownlods)
 
@@ -100,7 +101,7 @@ class GetMediaURL(QThread):
                     self.downloadToken = True
                     self.cacheVideo.write(chunk)
                     contentCnt += 1
-                    if not contentCnt % 2048000:  # 缓存超过1GB清除缓存刷新一次 原画大约要20分钟-30分钟
+                    if not contentCnt % self.maxCacheSize:  # 缓存超过用户设置的缓存大小（默认1GB）清除缓存刷新一次 原画大约要20分钟-30分钟
                         self.downloadError.emit()
                     elif contentCnt == maxCount:
                         self.cacheName.emit(fileName)
@@ -171,7 +172,7 @@ class VideoWidget(QFrame):
     fullScreenKey = pyqtSignal()  # 全屏快捷键
     muteExceptKey = pyqtSignal()  # 除了这个播放器 其他全部静音快捷键
 
-    def __init__(self, id, volume, cacheFolder, top=False, title='', resize=[], textSetting=[True, 20, 2, 6, 0, '【 [ {']):
+    def __init__(self, id, volume, cacheFolder, top=False, title='', resize=[], textSetting=[True, 20, 2, 6, 0, '【 [ {'], maxCacheSize=2048000, startWithDanmu=True):
         super(VideoWidget, self).__init__()
         self.setAcceptDrops(True)
         self.installEventFilter(self)
@@ -192,6 +193,8 @@ class VideoWidget(QFrame):
         self.fullScreen = False
         self.userPause = False  # 用户暂停
         self.cacheName = ''
+        self.maxCacheSize = maxCacheSize
+        self.startWithDanmu = startWithDanmu
         self.setFrameShape(QFrame.Box)
         self.setObjectName('video')
 
@@ -218,7 +221,6 @@ class VideoWidget(QFrame):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.textBrowser = TextBrowser(self)  # 必须赶在resizeEvent和moveEvent之前初始化textbrowser
-        # self.textBrowser.hide()  # 启动隐藏弹幕机
         self.setDanmuOpacity(self.textSetting[1])  # 设置弹幕透明度
         self.textBrowser.optionWidget.opacitySlider.setValue(self.textSetting[1])  # 设置选项页透明条
         self.textBrowser.optionWidget.opacitySlider.value.connect(self.setDanmuOpacity)
@@ -236,6 +238,9 @@ class VideoWidget(QFrame):
         self.textBrowser.optionWidget.translateFitler.textChanged.connect(self.setTranslateFilter)
         self.textBrowser.closeSignal.connect(self.closeDanmu)
         self.textBrowser.moveSignal.connect(self.moveTextBrowser)
+        if not self.startWithDanmu: # 如果启动隐藏被设置，隐藏弹幕机
+            self.textSetting[0] = False
+            self.textBrowser.hide()
 
         self.textPosDelta = QPoint(0, 0)  # 弹幕框和窗口之间的坐标差
 
@@ -299,11 +304,12 @@ class VideoWidget(QFrame):
         self.stop.clicked.connect(self.mediaStop)
         frameLayout.addWidget(self.stop)
 
-        self.getMediaURL = GetMediaURL(self.id, cacheFolder)
+        self.getMediaURL = GetMediaURL(self.id, cacheFolder, maxCacheSize)
         self.getMediaURL.cacheName.connect(self.setMedia)
         self.getMediaURL.downloadError.connect(self.mediaReload)
 
         self.danmu = remoteThread(self.roomID)
+
 
         self.exportCache = ExportCache()
         self.exportCache.finish.connect(self.exportFinish)
@@ -315,6 +321,7 @@ class VideoWidget(QFrame):
 
         self.checkPlaying = QTimer()  # 检查播放卡住的定时器
         self.checkPlaying.timeout.connect(self.checkPlayStatus)
+        print("VLC 播放器构造完毕, 缓存大小: %dkb , 置顶?: %s, 启用弹幕?: %s" % (self.maxCacheSize, self.top, self.startWithDanmu))
 
     def checkPlayStatus(self):  # 播放卡住了
         if not self.player.is_playing() and not self.isHidden() and self.liveStatus != 0 and not self.userPause:
@@ -439,7 +446,7 @@ class VideoWidget(QFrame):
 
     def doubleClick(self):
         if not self.top:  # 非弹出类悬浮窗
-            self.popWindow.emit([self.id, self.roomID, self.quality, True])
+            self.popWindow.emit([self.id, self.roomID, self.quality, True, self.startWithDanmu])
             self.mediaPlay(1, True)  # 暂停播放
 
     def leftMouseClicked(self):  # 设置drag事件 发送拖动封面的房间号
@@ -584,7 +591,7 @@ class VideoWidget(QFrame):
             self.volumeAmplify = 4.0
         if not self.top:
             if action == popWindow:
-                self.popWindow.emit([self.id, self.roomID, self.quality, False])
+                self.popWindow.emit([self.id, self.roomID, self.quality, False, self.startWithDanmu])
                 self.mediaPlay(1, True)  # 暂停播放
         elif self.top:
             if action == percent100:
@@ -635,6 +642,12 @@ class VideoWidget(QFrame):
     def showDanmu(self):
         if self.textBrowser.isHidden():
             self.textBrowser.show()
+            if not self.startWithDanmu:
+                self.danmu.message.connect(self.playDanmu)
+                self.danmu.terminate()
+                self.danmu.start()
+                self.textSetting[0] = True
+                self.startWithDanmu = True
             # self.translator.show()
         else:
             self.textBrowser.hide()
@@ -722,9 +735,11 @@ class VideoWidget(QFrame):
             self.danmu.message.disconnect(self.playDanmu)
         except:
             pass
-        self.danmu.message.connect(self.playDanmu)
-        self.danmu.terminate()
-        self.danmu.start()
+        if self.startWithDanmu:
+            self.danmu.message.connect(self.playDanmu)
+            self.danmu.terminate()
+            self.danmu.start()
+            self.textBrowser.show()
         if self.hardwareDecode:
             self.media = self.instance.media_new(cacheName, 'avcodec-hw=dxva2')  # 设置vlc并硬解播放
         else:

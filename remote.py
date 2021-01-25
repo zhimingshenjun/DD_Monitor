@@ -25,14 +25,18 @@ class remoteThread(QThread):
                     self.roomID = line.split('"roomid":')[1].split(',')[0]
 
     async def startup(self, url):
+        print('尝试打开 %s 的弹幕Socket' % self.roomID)
         data_raw = '000000{headerLen}0010000100000007000000017b22726f6f6d6964223a{roomid}7d'
         data_raw = data_raw.format(headerLen=hex(27 + len(self.roomID))[2:],
                                    roomid=''.join(map(lambda x: hex(ord(x))[2:], list(self.roomID))))
         async with AioWebSocket(url) as aws:
-            converse = aws.manipulator
-            await converse.send(bytes.fromhex(data_raw))
-            tasks = [self.receDM(converse), self.sendHeartBeat(converse)]
-            await asyncio.wait(tasks)
+            try:
+                converse = aws.manipulator
+                await converse.send(bytes.fromhex(data_raw))
+                tasks = [self.receDM(converse), self.sendHeartBeat(converse)]
+                await asyncio.wait(tasks)
+            except Error as e:
+                print(e)
 
     async def sendHeartBeat(self, websocket):
         hb = '00000010001000010000000200000001'
@@ -86,5 +90,8 @@ class remoteThread(QThread):
 
     def run(self):
         remote = r'wss://broadcastlv.chat.bilibili.com:2245/sub'
-        asyncio.set_event_loop(asyncio.new_event_loop())
-        asyncio.get_event_loop().run_until_complete(self.startup(remote))
+        try:
+            asyncio.set_event_loop(asyncio.new_event_loop())
+            asyncio.get_event_loop().run_until_complete(self.startup(remote))
+        except Error as e:
+            print(e)
