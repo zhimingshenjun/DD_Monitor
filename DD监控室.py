@@ -19,6 +19,7 @@ from LiverSelect import LiverPanel
 from pay import pay
 import faulthandler
 
+
 application_path = ""
 
 
@@ -45,7 +46,7 @@ class Version(QWidget):
         self.resize(350, 150)
         self.setWindowTitle('当前版本')
         layout = QGridLayout(self)
-        layout.addWidget(QLabel('DD监控室 v1.0'), 0, 0, 1, 2)
+        layout.addWidget(QLabel('DD监控室 v1.1'), 0, 0, 1, 2)
         layout.addWidget(QLabel('by 神君Channel'), 1, 0, 1, 2)
         layout.addWidget(QLabel('特别鸣谢：大锅饭 美东矿业'), 2, 0, 1, 2)
         releases_url = QLabel('')
@@ -73,6 +74,7 @@ class HotKey(QWidget):
         layout.addWidget(QLabel('H、h —— 隐藏控制条'), 1, 0)
         layout.addWidget(QLabel('M、m —— 除当前鼠标悬停窗口外全部静音'), 2, 0)
 
+
 class DumpConfig(QThread):
     def __init__(self, config):
         super(DumpConfig, self).__init__()
@@ -82,7 +84,7 @@ class DumpConfig(QThread):
     def run(self):
         try:
             configJSONPath = os.path.join(application_path, r'utils/config.json')
-            with open(configJSONPath, 'w') as f:
+            with codecs.open(configJSONPath, 'w', 'utf8') as f:
                 f.write(json.dumps(self.config, ensure_ascii=False))
         except Exception as e:
             logging.error(str(e))
@@ -91,7 +93,9 @@ class DumpConfig(QThread):
             self.backupNumber += 1
             if self.backupNumber == 4:
                 self.backupNumber = 1
-            with open(configJSONPath, 'w') as f:
+            # with open(configJSONPath, 'w') as f:
+            #     f.write(json.dumps(self.config, ensure_ascii=False))
+            with codecs.open(configJSONPath, 'w', 'utf8') as f:
                 f.write(json.dumps(self.config, ensure_ascii=False))
         except Exception as e:
             logging.error(str(e))
@@ -108,9 +112,11 @@ class MainWindow(QMainWindow):
         if os.path.exists(self.configJSONPath):  # 读取config
             if os.path.getsize(self.configJSONPath):
                 try:
-                    self.config = json.loads(open(self.configJSONPath).read())
-
-                except:
+                    with codecs.open(self.configJSONPath, 'r', 'utf8') as f:
+                        self.config = json.loads(f.read())
+                    # self.config = json.loads(open(self.configJSONPath).read())
+                except Exception as e:
+                    print(str(e))
                     self.config = {}
         if not self.config:  # 读取config失败 尝试读取备份
             for backupNumber in [1, 2, 3]:  # 备份预设123
@@ -319,8 +325,8 @@ class MainWindow(QMainWindow):
         self.payMenu.addAction(githubAction)
         feedAction = QAction('投喂作者', self, triggered=self.openFeed)
         self.payMenu.addAction(feedAction)
-        killAction = QAction('自尽(测试)', self, triggered=lambda a: 0 / 0)
-        self.payMenu.addAction(killAction)
+        # killAction = QAction('自尽(测试)', self, triggered=lambda a: 0 / 0)
+        # self.payMenu.addAction(killAction)
         progressText.setText('设置关于菜单...')
 
         self.oldMousePos = QPoint(0, 0)  # 初始化鼠标坐标
@@ -747,8 +753,6 @@ if __name__ == '__main__':
         pass
     cacheFolder = os.path.join(application_path, 'cache/%d' % time.time())  # 初始化缓存文件夹
     os.mkdir(cacheFolder)
-    # QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-    # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     # 主程序注释 + 应用qss
     app = QApplication(sys.argv)
     with open(os.path.join(application_path, 'utils/qdark.qss'), 'r') as f:
