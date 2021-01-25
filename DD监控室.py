@@ -5,6 +5,11 @@ DD监控室主界面进程 包含对所有子页面的初始化、排版管理
 新增全局鼠标坐标跟踪 用于刷新鼠标交互效果
 '''
 import log
+# 找不到 dll
+# https://stackoverflow.com/questions/54110504/dynlib-dll-was-no-found-when-the-application-was-frozen-when-i-make-a-exe-fil
+import ctypes
+ctypes.windll.kernel32.SetDllDirectoryW(None)
+
 import os, sys, json, time, shutil, logging
 from PyQt5.Qt import *
 from LayoutPanel import LayoutSettingPanel
