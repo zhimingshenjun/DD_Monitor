@@ -748,7 +748,7 @@ if __name__ == '__main__':
     app.setStyleSheet(qss)
     app.setFont(QFont('微软雅黑', 9))
     # 设置log
-    faulthandler.enable(all_threads=True)
+    # faulthandler.enable(all_threads=True)
     log_path = os.path.join(application_path, r'logs/log-%s.txt' % datetime.datetime.today().strftime('%Y-%m-%d') )
     logging.basicConfig(
         level=logging.INFO,
