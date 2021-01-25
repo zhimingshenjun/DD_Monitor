@@ -4,7 +4,8 @@ DD监控室主界面进程 包含对所有子页面的初始化、排版管理
 以及软件启动和退出后的一些操作
 新增全局鼠标坐标跟踪 用于刷新鼠标交互效果
 '''
-import os, sys, json, time, shutil, logging, faulthandler, datetime, signal
+import log
+import os, sys, json, time, shutil, logging
 from PyQt5.Qt import *
 from LayoutPanel import LayoutSettingPanel
 # from VideoWidget import PushButton, Slider, VideoWidget  # 已弃用
@@ -13,6 +14,7 @@ from LiverSelect import LiverPanel
 from pay import pay
 
 application_path = ""
+
 
 def _translate(context, text, disambig):
     return QApplication.translate(context, text, disambig)
@@ -747,17 +749,9 @@ if __name__ == '__main__':
         qss = f.read()
     app.setStyleSheet(qss)
     app.setFont(QFont('微软雅黑', 9))
-    # 设置log
+
     # faulthandler.enable(all_threads=True)
-    log_path = os.path.join(application_path, r'logs/log-%s.txt' % datetime.datetime.today().strftime('%Y-%m-%d') )
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s",
-        handlers=[
-            logging.FileHandler(log_path),
-            logging.StreamHandler()
-        ]
-    )
+
     # 欢迎页面
     splash = QSplashScreen(QPixmap(os.path.join(application_path, 'utils/splash.jpg')), Qt.WindowStaysOnTopHint)
     progressBar = QProgressBar(splash)
