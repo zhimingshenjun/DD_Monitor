@@ -5,7 +5,7 @@ DD监控室主界面进程 包含对所有子页面的初始化、排版管理
 新增全局鼠标坐标跟踪 用于刷新鼠标交互效果
 '''
 import os, sys, json, time, shutil, codecs
-import logging, faulthandler, datetime, signal
+import logging, faulthandler, datetime
 from PyQt5.Qt import *
 from LayoutPanel import LayoutSettingPanel
 # from VideoWidget import PushButton, Slider, VideoWidget  # 已弃用
@@ -39,7 +39,7 @@ class Version(QWidget):
         self.resize(350, 150)
         self.setWindowTitle('当前版本')
         layout = QGridLayout(self)
-        layout.addWidget(QLabel('DD监控室 v1.0'), 0, 0, 1, 2)
+        layout.addWidget(QLabel('DD监控室 v1.1'), 0, 0, 1, 2)
         layout.addWidget(QLabel('by 神君Channel'), 1, 0, 1, 2)
         layout.addWidget(QLabel('特别鸣谢：大锅饭 美东矿业'), 2, 0, 1, 2)
         releases_url = QLabel('')
@@ -746,8 +746,6 @@ if __name__ == '__main__':
         pass
     cacheFolder = os.path.join(application_path, 'cache/%d' % time.time())  # 初始化缓存文件夹
     os.mkdir(cacheFolder)
-    # QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-    # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
     # 主程序注释 + 应用qss
     app = QApplication(sys.argv)
     with open(os.path.join(application_path, 'utils/qdark.qss'), 'r') as f:
@@ -755,7 +753,7 @@ if __name__ == '__main__':
     app.setStyleSheet(qss)
     app.setFont(QFont('微软雅黑', 9))
     # 设置log
-    faulthandler.enable(all_threads=True)
+    faulthandler.enable(all_threads=True)  # 为什么加了这一行后pyinstaller打包后无法运行
     log_path = os.path.join(application_path, r'logs/log-%s.txt' % datetime.datetime.today().strftime('%Y-%m-%d') )
     logging.basicConfig(
         level=logging.INFO,
@@ -765,6 +763,7 @@ if __name__ == '__main__':
             logging.StreamHandler()
         ]
     )
+
     # 欢迎页面
     splash = QSplashScreen(QPixmap(os.path.join(application_path, 'utils/splash.jpg')), Qt.WindowStaysOnTopHint)
     progressBar = QProgressBar(splash)
