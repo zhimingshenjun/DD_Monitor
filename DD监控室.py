@@ -5,6 +5,7 @@ DD监控室主界面进程 包含对所有子页面的初始化、排版管理
 新增全局鼠标坐标跟踪 用于刷新鼠标交互效果
 '''
 import os, sys, json, time, shutil, codecs
+import logging, faulthandler, datetime, signal
 from PyQt5.Qt import *
 from LayoutPanel import LayoutSettingPanel
 # from VideoWidget import PushButton, Slider, VideoWidget  # 已弃用
@@ -79,7 +80,7 @@ class DumpConfig(QThread):
             with codecs.open(configJSONPath, 'w', 'utf8') as f:
                 f.write(json.dumps(self.config, ensure_ascii=False))
         except Exception as e:
-            print(str(e))
+            logging.error(str(e))
         try:  # 备份 防止存储config时崩溃
             configJSONPath = os.path.join(application_path, r'utils/config_备份%d.json' % self.backupNumber)
             self.backupNumber += 1
@@ -90,10 +91,10 @@ class DumpConfig(QThread):
             with codecs.open(configJSONPath, 'w', 'utf8') as f:
                 f.write(json.dumps(self.config, ensure_ascii=False))
         except Exception as e:
-            print(str(e))
+            logging.error(str(e))
 
 class MainWindow(QMainWindow):
-    def __init__(self, cacheFolder):
+    def __init__(self, cacheFolder, progressBar, progressText):
         super(MainWindow, self).__init__()
         self.setWindowTitle('DD监控室')
         self.resize(1600, 900)
@@ -139,6 +140,12 @@ class MainWindow(QMainWindow):
                     self.config['danmu'][index] = [textSetting, 20, 1, 7, 0, '【 [ {']
             if 'hardwareDecode' not in self.config:
                 self.config['hardwareDecode'] = True
+            if 'maxCacheSize' not in self.config:
+                self.config['maxCacheSize'] = 2048000
+                logging.warn('最大缓存没有被设置，使用默认1G')
+            if 'startWithDanmu' not in self.config:
+                self.config['startWithDanmu'] = True
+                logging.warn('启动时加载弹幕没有被设置，默认加载')
         else:
             self.config = {
                 'roomid': {'21396545': False, '21402309': False, '22384516': False, '8792912': False,
@@ -159,6 +166,8 @@ class MainWindow(QMainWindow):
                 'globalVolume': 30,
                 'control': True,
                 'hardwareDecode': True,
+                'maxCacheSize': 2048000,
+                'startWithDanmu': True
             }
         self.dumpConfig = DumpConfig(self.config)
         mainWidget = QWidget()
@@ -174,9 +183,13 @@ class MainWindow(QMainWindow):
 
         self.videoWidgetList = []
         self.popVideoWidgetList = []
+        vlcProgressCounter = 1
         for i in range(9):
             volume = self.config['volume'][i]
-            self.videoWidgetList.append(VideoWidget(i, volume, cacheFolder, textSetting=self.config['danmu'][i]))
+            progressText.setText('设置第%s个主层播放器...' % str(i + 1))
+            self.videoWidgetList.append(VideoWidget(i, volume, cacheFolder, textSetting=self.config['danmu'][i], maxCacheSize = self.config['maxCacheSize'], startWithDanmu=self.config['startWithDanmu']))
+            vlcProgressCounter += 1
+            progressBar.setValue(vlcProgressCounter)
             # self.videoWidgetList[i].mutedChanged.connect(self.mutedChanged)  # 硬盘io过高 屏蔽掉 退出的时候统一保存
             # self.videoWidgetList[i].volumeChanged.connect(self.volumeChanged)  # 硬盘io过高 屏蔽掉 退出的时候统一保存
             self.videoWidgetList[i].addMedia.connect(self.addMedia)
@@ -194,7 +207,12 @@ class MainWindow(QMainWindow):
             self.videoWidgetList[i].slider.setValue(self.config['volume'][i])
             self.videoWidgetList[i].quality = self.config['quality'][i]
             self.videoWidgetList[i].audioChannel = self.config['audioChannel'][i]
-            self.popVideoWidgetList.append(VideoWidget(i + 9, volume, cacheFolder, True, '悬浮窗', [1280, 720]))
+            self.popVideoWidgetList.append(VideoWidget(i + 9, volume, cacheFolder, True, '悬浮窗', [1280, 720], maxCacheSize=self.config['maxCacheSize'], startWithDanmu=self.config['startWithDanmu']))
+            vlcProgressCounter += 1
+            progressBar.setValue(vlcProgressCounter)
+            progressText.setText('设置第%s个悬浮窗播放器...' % str(i + 1))
+            app.processEvents()
+            logging.info("VLC设置完毕 %s / 9" % str(i + 1))
         self.setPlayer()
 
         self.controlBar = QToolBar()
@@ -219,14 +237,17 @@ class MainWindow(QMainWindow):
         self.stop = PushButton(self.style().standardIcon(QStyle.SP_DialogCancelButton))
         self.stop.clicked.connect(self.globalMediaStop)
         self.controlBar.addWidget(self.stop)
+        progressText.setText('设置播放器控制...')
 
         self.addButton = QPushButton('+')
         self.addButton.setFixedSize(160, 104)
         self.addButton.setStyleSheet('border:3px dotted #EEEEEE')
         self.addButton.setFont(QFont('Arial', 24, QFont.Bold))
+        progressText.setText('设置添加控制...')
 
         self.controlBar.addWidget(self.addButton)
         self.controlBar.addWidget(QLabel())
+        progressText.setText('设置全局控制...')
 
         self.scrollArea = ScrollArea()
         self.scrollArea.setStyleSheet('border-width:0px')
@@ -239,6 +260,7 @@ class MainWindow(QMainWindow):
         self.liverPanel.refreshIDList.connect(self.refreshPlayerStatus)  # 刷新播放器
         self.scrollArea.setWidget(self.liverPanel)
         self.addButton.clicked.connect(self.liverPanel.openLiverRoomPanel)
+        progressText.setText('设置主播选择控制...')
 
         self.optionMenu = self.menuBar().addMenu('设置')
         self.controlBarToken = self.config['control']
@@ -263,6 +285,10 @@ class MainWindow(QMainWindow):
         hardDecodeMenu.addAction(hardDecodeAction)
         softDecodeAction = QAction('软解', self, triggered=lambda: self.setDecode(False))
         hardDecodeMenu.addAction(softDecodeAction)
+        cacheSizeSetting = QAction('最大缓存设置', self, triggered=self.openCacheSizeSetting)
+        self.optionMenu.addAction(cacheSizeSetting)
+        startWithDanmuSetting = QAction('自动加载弹幕设置', self, triggered=self.openStartWithDanmuSetting)
+        self.optionMenu.addAction(startWithDanmuSetting)
         controlPanelAction = QAction('显示 / 隐藏控制条(H)', self, triggered=self.openControlPanel)
         self.optionMenu.addAction(controlPanelAction)
         self.fullScreenAction = QAction('全屏(F) / 退出(Esc)', self, triggered=self.fullScreen)
@@ -271,6 +297,7 @@ class MainWindow(QMainWindow):
         self.optionMenu.addAction(exportConfig)
         importConfig = QAction('导入预设', self, triggered=self.importConfig)
         self.optionMenu.addAction(importConfig)
+        progressText.setText('设置选项菜单...')
 
         self.versionMenu = self.menuBar().addMenu('帮助')
         bilibiliAction = QAction('B站视频', self, triggered=self.openBilibili)
@@ -284,18 +311,24 @@ class MainWindow(QMainWindow):
         otherDDMenu.addAction(DDSubtitleAction)
         DDThanksAction = QAction('DD答谢机', self, triggered=self.openDDThanks)
         otherDDMenu.addAction(DDThanksAction)
+        progressText.setText('设置帮助菜单...')
 
         self.payMenu = self.menuBar().addMenu('开源和投喂')
         githubAction = QAction('GitHub', self, triggered=self.openGithub)
         self.payMenu.addAction(githubAction)
         feedAction = QAction('投喂作者', self, triggered=self.openFeed)
         self.payMenu.addAction(feedAction)
+        killAction = QAction('自尽(测试)', self, triggered=lambda a: 0 / 0)
+        self.payMenu.addAction(killAction)
+        progressText.setText('设置关于菜单...')
 
         self.oldMousePos = QPoint(0, 0)  # 初始化鼠标坐标
         self.hideMouseCnt = 90
         self.mouseTrackTimer = QTimer()
         self.mouseTrackTimer.timeout.connect(self.checkMousePos)
         self.mouseTrackTimer.start(100)  # 0.1s检测一次
+        progressText.setText('设置UI...')
+        logging.info('UI构造完毕')
 
     def setPlayer(self):
         for index, layoutConfig in enumerate(self.config['layout']):
@@ -372,12 +405,15 @@ class MainWindow(QMainWindow):
         self.dumpConfig.start()
 
     def popWindow(self, info):  # 悬浮窗播放
-        id, roomID, quality, showMax = info
+        id, roomID, quality, showMax, startWithDanmu = info
+        logging.info("%s 进入悬浮窗模式, 弹幕?: %s"  % (roomID, startWithDanmu))
         self.popVideoWidgetList[id].roomID = roomID
         self.popVideoWidgetList[id].quality = quality
         self.popVideoWidgetList[id].resize(1280, 720)
         self.popVideoWidgetList[id].show()
-        self.popVideoWidgetList[id].textBrowser.show()
+        if startWithDanmu:
+            self.popVideoWidgetList[id].showDanmu()
+            self.popVideoWidgetList[id].textBrowser.show()
         if showMax:
             self.popVideoWidgetList[id].showMaximized()
         self.popVideoWidgetList[id].mediaReload()
@@ -477,6 +513,28 @@ class MainWindow(QMainWindow):
 
     def openDDThanks(self):
         QDesktopServices.openUrl(QUrl(r'https://www.bilibili.com/video/BV1Di4y1L7T2'))
+
+    def openCacheSizeSetting(self):
+        userInputCache, okPressed = QInputDialog.getInt(self,"设置最大缓存大小","最大缓存(GB)",
+            int(float(self.config['maxCacheSize']) / (10 ** 6)), 1, 4, 1)
+        if okPressed:
+            self.config['maxCacheSize'] = int(userInputCache * 10 ** 6)
+            self.dumpConfig.start()
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Information)
+            msg.setText("缓存大小设置成功，重启监控室后生效。")
+            msg.exec()
+
+    def openStartWithDanmuSetting(self):
+        items = ('加载(推荐，默认。但可能增加网络压力，可能会被限流。)', '不加载')
+        defulatSelection = 0
+        if not self.config['startWithDanmu']:
+            defulatSelection = 1
+        selection, okPressed = QInputDialog.getItem(self,"设置启动时是否加载弹幕", "加载选项", items, defulatSelection, False)
+        if okPressed:
+            trueDanmu = (selection == items[0])
+            self.config['startWithDanmu'] = trueDanmu
+            self.dumpConfig.start()
 
     def openHotKey(self):
         self.hotKey.hide()
@@ -599,7 +657,7 @@ class MainWindow(QMainWindow):
                     f.write(json.dumps(self.config, ensure_ascii=False))
                 QMessageBox.information(self, '导出预设', '导出完成', QMessageBox.Ok)
             except Exception as e:
-                print(str(e))
+                logging.error(str(e))
 
     def importConfig(self):
         jsonPath = QFileDialog.getOpenFileName(self, "选择预设", None, "*.json")[0]
@@ -676,8 +734,11 @@ if __name__ == '__main__':
     elif __file__:
         application_path = os.path.dirname(__file__)
     cachePath = os.path.join(application_path, 'cache')
+    logsPath = os.path.join(application_path, 'logs')
     if not os.path.exists(cachePath):  # 启动前初始化cache文件夹
         os.mkdir(cachePath)
+    if not os.path.exists(logsPath):  # 启动前初始化logs文件夹
+        os.mkdir(logsPath)
     try:  # 尝试清除上次缓存 如果失败则跳过
         for cacheFolder in os.listdir(cachePath):
             shutil.rmtree(os.path.join(application_path, 'cache/%s' % cacheFolder))
@@ -687,14 +748,34 @@ if __name__ == '__main__':
     os.mkdir(cacheFolder)
     # QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
     # QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    # 主程序注释 + 应用qss
     app = QApplication(sys.argv)
-    splash = QSplashScreen(QPixmap(os.path.join(application_path, 'utils/splash.jpg')))
-    splash.show()
     with open(os.path.join(application_path, 'utils/qdark.qss'), 'r') as f:
         qss = f.read()
     app.setStyleSheet(qss)
     app.setFont(QFont('微软雅黑', 9))
-    mainWindow = MainWindow(cacheFolder)
+    # 设置log
+    faulthandler.enable(all_threads=True)
+    log_path = os.path.join(application_path, r'logs/log-%s.txt' % datetime.datetime.today().strftime('%Y-%m-%d') )
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s",
+        handlers=[
+            logging.FileHandler(log_path),
+            logging.StreamHandler()
+        ]
+    )
+    # 欢迎页面
+    splash = QSplashScreen(QPixmap(os.path.join(application_path, 'utils/splash.jpg')), Qt.WindowStaysOnTopHint)
+    progressBar = QProgressBar(splash)
+    progressBar.setMaximum(18) # 9 * 2个播放器, 0 - 17 index
+    progressBar.setGeometry(0, splash.height() - 20, splash.width(), 20)
+    progressText = QLabel(splash)
+    progressText.setText("加载中...")
+    progressText.setGeometry(0, 0, 170, 20)
+    splash.show()
+    # 主页面入口
+    mainWindow = MainWindow(cacheFolder, progressBar, progressText)
     mainWindow.showMaximized()
     mainWindow.show()
     splash.hide()
