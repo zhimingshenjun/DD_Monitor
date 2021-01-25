@@ -509,7 +509,7 @@ class MainWindow(QMainWindow):
 
     def openCacheSizeSetting(self):
         userInputCache, okPressed = QInputDialog.getInt(self,"设置最大缓存大小","最大缓存(GB)",
-         float(self.config['maxCacheSize']) / (10 ** 6), 1, 4, 1)
+            int(float(self.config['maxCacheSize']) / (10 ** 6)), 1, 4, 1)
         if okPressed:
             self.config['maxCacheSize'] = int(userInputCache * 10 ** 6)
             self.dumpConfig.start()
