@@ -1,14 +1,19 @@
+# IDE setting
+.DS_Store
+.vscode/
+.idea/
+venv/
+
+# Cache & binary & logs
 __pycache__
 cache/
-.vscode/
 build/
 dist/
-venv/
-.DS_Store
 *.build/
 *.dist/
+logs/
+
+# Config
 config_*.json
 config.json
-.idea
 !utils/config_default.json
-logs/
