@@ -1,7 +1,10 @@
 @echo off
-pyinstaller DDº‡øÿ “.spec
-mkdir dist\DDº‡øÿ “\utils
-copy utils\config_default.json dist\DDº‡øÿ “\utils\config.json
-copy utils\qdark.qss dist\DDº‡øÿ “\utils
-copy utils\vtb.csv dist\DDº‡øÿ “\utils
-copy utils\splash.jpg dist\DDº‡øÿ “\utils
+pyinstaller DDMonitor.spec
+mkdir dist\DDMonitor\utils
+copy utils\config_default.json dist\DDMonitor\utils\config.json
+copy utils\qdark.qss dist\DDMonitor\utils
+copy utils\vtb.csv dist\DDMonitor\utils
+copy utils\splash.jpg dist\DDMonitor\utils
+copy scripts\run.bat dist\DDMonitor
+copy utils\ascii.txt dist\DDMonitor
+copy utils\help.html dist\DDMonitor\HELP.html

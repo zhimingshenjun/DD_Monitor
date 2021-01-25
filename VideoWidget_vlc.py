@@ -9,6 +9,7 @@ from remote import remoteThread
 from danmu import TextBrowser
 import vlc
 import platform
+import logging
 
 header = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'
@@ -108,7 +109,7 @@ class GetMediaURL(QThread):
             self.cacheVideo.close()
             os.remove(fileName)  # 清除缓存
         except Exception as e:
-            print(str(e))
+            logging.error(str(e))
 
 
 class VideoFrame(QFrame):
@@ -146,7 +147,7 @@ class ExportCache(QThread):
             shutil.copy(self.ori, self.dst)
             self.finish.emit([True, self.dst])  # 导出成功
         except Exception as e:  # 导出失败
-            print(e)
+            logging.error(e)
             self.finish.emit([False, self.dst])
 
 
@@ -321,7 +322,7 @@ class VideoWidget(QFrame):
 
         self.checkPlaying = QTimer()  # 检查播放卡住的定时器
         self.checkPlaying.timeout.connect(self.checkPlayStatus)
-        print("VLC 播放器构造完毕, 缓存大小: %dkb , 置顶?: %s, 启用弹幕?: %s" % (self.maxCacheSize, self.top, self.startWithDanmu))
+        logging.info("VLC 播放器构造完毕, 缓存大小: %dkb , 置顶?: %s, 启用弹幕?: %s" % (self.maxCacheSize, self.top, self.startWithDanmu))
 
     def checkPlayStatus(self):  # 播放卡住了
         if not self.player.is_playing() and not self.isHidden() and self.liveStatus != 0 and not self.userPause:
@@ -455,7 +456,7 @@ class VideoWidget(QFrame):
         mimeData.setText('exchange:%s:%s' % (self.id, self.roomID))
         drag.setMimeData(mimeData)
         drag.exec_()
-        print('drag exchange:%s:%s' % (self.id, self.roomID))
+        logging.debug('drag exchange:%s:%s' % (self.id, self.roomID))
 
     def dragEnterEvent(self, QDragEnterEvent):
         QDragEnterEvent.accept()

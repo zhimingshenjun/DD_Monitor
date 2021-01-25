@@ -2,7 +2,7 @@
 DD监控室主界面上方的控制条里的ScrollArea里面的卡片模块
 包含主播开播/下播检测和刷新展示 置顶排序 录制管理等功能
 '''
-import requests, json, time, codecs
+import requests, json, time, codecs, logging
 from PyQt5.Qt import *
 
 
@@ -147,7 +147,7 @@ class RecordThread(QThread):
                     self.cacheVideo.write(chunk)
             self.cacheVideo.close()
         except Exception as e:
-            print(str(e))
+            logging.error(str(e))
 
 
 class DownloadImage(QThread):
@@ -423,7 +423,7 @@ class DownloadVTBList(QThread):
             if vtbList:
                 self.vtbList.emit(vtbList)
         except Exception as e:
-            print(str(e))
+            logging.error(str(e))
 
 
 class HotLiverTable(QTableWidget):
@@ -560,7 +560,7 @@ class AddLiverRoomWidget(QWidget):
                 for x in range(3):
                     self.hacoTable.setItem(y, x, QTableWidgetItem(line[x]))
         except Exception as e:
-            print(str(e))
+            logging.error(str(e))
         self.hacoTable.setHorizontalHeaderLabels(['主播名', '直播间房号', '所属'])
         self.hacoTable.setColumnWidth(0, 160)
         self.hacoTable.setColumnWidth(1, 160)
@@ -619,7 +619,7 @@ class AddLiverRoomWidget(QWidget):
                 vtbs.write(line)
             vtbs.close()
         except Exception as e:
-            print(str(e))
+            logging.error(str(e))
 
     def sendSelectedRoom(self):
         tmpList = self.roomEdit.text().strip().replace('\t', ' ').split(' ')
@@ -640,7 +640,7 @@ class AddLiverRoomWidget(QWidget):
                 addedRoomID += ' %s' % roomID
                 self.roomEdit.setText(addedRoomID)
         except Exception as e:
-            print(str(e))
+            logging.error(str(e))
 
     def hacoAdd(self, row):
         try:

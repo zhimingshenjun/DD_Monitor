@@ -4,14 +4,13 @@ DD监控室主界面进程 包含对所有子页面的初始化、排版管理
 以及软件启动和退出后的一些操作
 新增全局鼠标坐标跟踪 用于刷新鼠标交互效果
 '''
-import os, sys, json, time, shutil
+import os, sys, json, time, shutil, logging, faulthandler, datetime, signal
 from PyQt5.Qt import *
 from LayoutPanel import LayoutSettingPanel
 # from VideoWidget import PushButton, Slider, VideoWidget  # 已弃用
 from VideoWidget_vlc import PushButton, Slider, VideoWidget
 from LiverSelect import LiverPanel
 from pay import pay
-
 
 application_path = ""
 
@@ -78,7 +77,7 @@ class DumpConfig(QThread):
             with open(configJSONPath, 'w') as f:
                 f.write(json.dumps(self.config, ensure_ascii=False))
         except Exception as e:
-            print(str(e))
+            logging.error(str(e))
         try:  # 备份 防止存储config时崩溃
             configJSONPath = os.path.join(application_path, r'utils/config_备份%d.json' % self.backupNumber)
             self.backupNumber += 1
@@ -87,7 +86,7 @@ class DumpConfig(QThread):
             with open(configJSONPath, 'w') as f:
                 f.write(json.dumps(self.config, ensure_ascii=False))
         except Exception as e:
-            print(str(e))
+            logging.error(str(e))
 
 class MainWindow(QMainWindow):
     def __init__(self, cacheFolder, progressBar, progressText):
@@ -136,10 +135,10 @@ class MainWindow(QMainWindow):
                 self.config['hardwareDecode'] = True
             if 'maxCacheSize' not in self.config:
                 self.config['maxCacheSize'] = 2048000
-                print('最大缓存没有被设置，使用默认1G')
+                logging.warn('最大缓存没有被设置，使用默认1G')
             if 'startWithDanmu' not in self.config:
                 self.config['startWithDanmu'] = True
-                print('启动时加载弹幕没有被设置，默认加载')
+                logging.warn('启动时加载弹幕没有被设置，默认加载')
         else:
             self.config = {
                 'roomid': {'21396545': False, '21402309': False, '22384516': False, '8792912': False,
@@ -206,7 +205,7 @@ class MainWindow(QMainWindow):
             progressBar.setValue(vlcProgressCounter)
             progressText.setText('设置第%s个悬浮窗播放器...' % str(i + 1))
             app.processEvents()
-            print("VLC设置完毕 %s / 9" % str(i + 1))
+            logging.info("VLC设置完毕 %s / 9" % str(i + 1))
         self.setPlayer()
 
         self.controlBar = QToolBar()
@@ -312,6 +311,8 @@ class MainWindow(QMainWindow):
         self.payMenu.addAction(githubAction)
         feedAction = QAction('投喂作者', self, triggered=self.openFeed)
         self.payMenu.addAction(feedAction)
+        killAction = QAction('自尽(测试)', self, triggered=lambda a: 0 / 0)
+        self.payMenu.addAction(killAction)
         progressText.setText('设置关于菜单...')
 
         self.oldMousePos = QPoint(0, 0)  # 初始化鼠标坐标
@@ -320,7 +321,7 @@ class MainWindow(QMainWindow):
         self.mouseTrackTimer.timeout.connect(self.checkMousePos)
         self.mouseTrackTimer.start(100)  # 0.1s检测一次
         progressText.setText('设置UI...')
-        print('UI构造完毕')
+        logging.info('UI构造完毕')
 
     def setPlayer(self):
         for index, layoutConfig in enumerate(self.config['layout']):
@@ -398,7 +399,7 @@ class MainWindow(QMainWindow):
 
     def popWindow(self, info):  # 悬浮窗播放
         id, roomID, quality, showMax, startWithDanmu = info
-        print("%s 进入悬浮窗模式, 弹幕?: %s"  % (roomID, startWithDanmu))
+        logging.info("%s 进入悬浮窗模式, 弹幕?: %s"  % (roomID, startWithDanmu))
         self.popVideoWidgetList[id].roomID = roomID
         self.popVideoWidgetList[id].quality = quality
         self.popVideoWidgetList[id].resize(1280, 720)
@@ -649,7 +650,7 @@ class MainWindow(QMainWindow):
                     f.write(json.dumps(self.config, ensure_ascii=False))
                 QMessageBox.information(self, '导出预设', '导出完成', QMessageBox.Ok)
             except Exception as e:
-                print(str(e))
+                logging.error(str(e))
 
     def importConfig(self):
         jsonPath = QFileDialog.getOpenFileName(self, "选择预设", None, "*.json")[0]
@@ -726,8 +727,11 @@ if __name__ == '__main__':
     elif __file__:
         application_path = os.path.dirname(__file__)
     cachePath = os.path.join(application_path, 'cache')
+    logsPath = os.path.join(application_path, 'logs')
     if not os.path.exists(cachePath):  # 启动前初始化cache文件夹
         os.mkdir(cachePath)
+    if not os.path.exists(logsPath):  # 启动前初始化logs文件夹
+        os.mkdir(logsPath)
     try:  # 尝试清除上次缓存 如果失败则跳过
         for cacheFolder in os.listdir(cachePath):
             shutil.rmtree(os.path.join(application_path, 'cache/%s' % cacheFolder))
@@ -743,6 +747,17 @@ if __name__ == '__main__':
         qss = f.read()
     app.setStyleSheet(qss)
     app.setFont(QFont('微软雅黑', 9))
+    # 设置log
+    faulthandler.enable(all_threads=True)
+    log_path = os.path.join(application_path, r'logs/log-%s.txt' % datetime.datetime.today().strftime('%Y-%m-%d') )
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s",
+        handlers=[
+            logging.FileHandler(log_path),
+            logging.StreamHandler()
+        ]
+    )
     # 欢迎页面
     splash = QSplashScreen(QPixmap(os.path.join(application_path, 'utils/splash.jpg')), Qt.WindowStaysOnTopHint)
     progressBar = QProgressBar(splash)

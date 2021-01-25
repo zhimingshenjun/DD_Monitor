@@ -2,9 +2,8 @@
 
 block_cipher = None
 
-
 a = Analysis(['DD监控室.py'],
-             pathex=['C:\\workspace\\Python教程系列\\DD监控室'],
+             pathex=['C:\\workspace\\Python教程系列\\DDMonitor'],
              binaries=[],
              datas=[],
              hiddenimports=[],
@@ -21,11 +20,12 @@ exe = EXE(pyz,
           a.scripts,
           [],
           exclude_binaries=True,
-          name='DD监控室',
+          name='DDMonitor',
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
           upx=True,
+          icon='favicon.ico',
           console=True )
 coll = COLLECT(exe,
                a.binaries,
@@ -34,4 +34,4 @@ coll = COLLECT(exe,
                strip=False,
                upx=True,
                upx_exclude=[],
-               name='DD监控室')
+               name='DDMonitor')
