@@ -4,8 +4,19 @@ block_cipher = None
 
 a = Analysis(['DD监控室.py'],
              pathex=[],
-             binaries=[],
-             datas=[],
+             binaries=[
+                ('libvlc.dll', '.'),
+                ('libvlccore.dll', '.'),
+                ('plugins', 'plugins'),
+             ],
+             datas=[
+                ('utils/ascii.txt', '.'),
+                ('utils/help.html', '.'),
+                ('utils/qdark.qss', 'utils'),
+                ('utils/splash.jpg', 'utils'),
+                ('utils/vtb.csv', 'utils'),
+                ('scripts/run.bat', '.'),
+            ],
              hiddenimports=[],
              hookspath=[],
              runtime_hooks=[],
