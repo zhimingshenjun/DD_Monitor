@@ -318,8 +318,8 @@ class MainWindow(QMainWindow):
         self.payMenu.addAction(githubAction)
         feedAction = QAction('投喂作者', self, triggered=self.openFeed)
         self.payMenu.addAction(feedAction)
-        killAction = QAction('自尽(测试)', self, triggered=lambda a: 0 / 0)
-        self.payMenu.addAction(killAction)
+        # killAction = QAction('自尽(测试)', self, triggered=lambda a: 0 / 0)
+        # self.payMenu.addAction(killAction)
         progressText.setText('设置关于菜单...')
 
         self.oldMousePos = QPoint(0, 0)  # 初始化鼠标坐标

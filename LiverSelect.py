@@ -117,6 +117,7 @@ class RecordThread(QThread):
         self.downloadTime = 0  # s
         self.checkTimer = QTimer()
         self.checkTimer.timeout.connect(self.checkDownlods)
+        self.reconnectCount = 0
 
     def checkDownlods(self):
         if self.downloadToken:
@@ -125,12 +126,15 @@ class RecordThread(QThread):
                 self.downloadTimer.emit('%dmin' % (self.downloadTime / 60))
             self.downloadTime += 3
         else:
-            self.downloadError.emit(self.roomID)
+            self.reconnectCount += 1
+            if self.reconnectCount > 60:  # 60 x 3s = 180s重试 超时了就退出
+                self.downloadError.emit(self.roomID)
 
     def setSavePath(self, savePath):
         self.savePath = savePath
 
     def run(self):
+        self.reconnectCount = 0
         api = r'https://api.live.bilibili.com/room/v1/Room/playUrl?cid=%s&platform=web&qn=10000' % self.roomID
         r = requests.get(api)
         try:
@@ -382,7 +386,7 @@ class GetFollows(QThread):
         if self.uid:
             followsIDs = []
             roomIDList = []
-            for p in range(0, 6):
+            for p in range(1, 6):
                 r = requests.get(r'https://api.bilibili.com/x/relation/followings?vmid=%s&pn=%s' % (self.uid, p))
                 followList = json.loads(r.text)['data']['list']
                 if followList:
@@ -397,6 +401,8 @@ class GetFollows(QThread):
                         if uid == str(followID):
                             roomIDList.append([info['uname'], info['title'], str(info['room_id'])])
                             break
+            else:
+                logging.error('未获取到有效房号列表或房号列表为空')
             if roomIDList:
                 self.roomInfoSummary.emit(roomIDList)
 
