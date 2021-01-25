@@ -1,5 +1,6 @@
 @echo off
 pyinstaller DDMonitor.spec
+mkdir dist\DDMonitor\logs
 mkdir dist\DDMonitor\utils
 copy utils\config_default.json dist\DDMonitor\utils\config.json
 copy utils\qdark.qss dist\DDMonitor\utils

@@ -12,6 +12,7 @@ from LayoutPanel import LayoutSettingPanel
 from VideoWidget_vlc import PushButton, Slider, VideoWidget
 from LiverSelect import LiverPanel
 from pay import pay
+import faulthandler
 
 application_path = ""
 

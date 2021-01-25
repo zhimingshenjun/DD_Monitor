@@ -3,7 +3,7 @@
 block_cipher = None
 
 a = Analysis(['DD监控室.py'],
-             pathex=['C:\\workspace\\Python教程系列\\DDMonitor'],
+             pathex=[],
              binaries=[],
              datas=[],
              hiddenimports=[],
