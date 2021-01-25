@@ -4,7 +4,7 @@ DD监控室主界面进程 包含对所有子页面的初始化、排版管理
 以及软件启动和退出后的一些操作
 新增全局鼠标坐标跟踪 用于刷新鼠标交互效果
 '''
-import os, sys, json, time, shutil
+import os, sys, json, time, shutil, codecs
 from PyQt5.Qt import *
 from LayoutPanel import LayoutSettingPanel
 # from VideoWidget import PushButton, Slider, VideoWidget  # 已弃用
@@ -76,7 +76,7 @@ class DumpConfig(QThread):
     def run(self):
         try:
             configJSONPath = os.path.join(application_path, r'utils/config.json')
-            with open(configJSONPath, 'w') as f:
+            with codecs.open(configJSONPath, 'w', 'utf8') as f:
                 f.write(json.dumps(self.config, ensure_ascii=False))
         except Exception as e:
             print(str(e))
@@ -85,7 +85,9 @@ class DumpConfig(QThread):
             self.backupNumber += 1
             if self.backupNumber == 4:
                 self.backupNumber = 1
-            with open(configJSONPath, 'w') as f:
+            # with open(configJSONPath, 'w') as f:
+            #     f.write(json.dumps(self.config, ensure_ascii=False))
+            with codecs.open(configJSONPath, 'w', 'utf8') as f:
                 f.write(json.dumps(self.config, ensure_ascii=False))
         except Exception as e:
             print(str(e))
@@ -102,9 +104,11 @@ class MainWindow(QMainWindow):
         if os.path.exists(self.configJSONPath):  # 读取config
             if os.path.getsize(self.configJSONPath):
                 try:
-                    self.config = json.loads(open(self.configJSONPath).read())
-
-                except:
+                    with codecs.open(self.configJSONPath, 'r', 'utf8') as f:
+                        self.config = json.loads(f.read())
+                    # self.config = json.loads(open(self.configJSONPath).read())
+                except Exception as e:
+                    print(str(e))
                     self.config = {}
         if not self.config:  # 读取config失败 尝试读取备份
             for backupNumber in [1, 2, 3]:  # 备份预设123
