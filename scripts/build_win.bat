@@ -1,5 +1,5 @@
 @echo off
-pyinstaller DDMonitor.spec
+pyinstaller --clean DDMonitor.spec
 mkdir dist\DDMonitor\logs
 mkdir dist\DDMonitor\utils
 copy utils\config_default.json dist\DDMonitor\utils\config.json
