@@ -11,3 +11,4 @@ config_*.json
 config.json
 .idea
 !utils/config_default.json
+logs/
