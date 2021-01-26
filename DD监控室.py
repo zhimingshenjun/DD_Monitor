@@ -19,6 +19,7 @@ from VideoWidget_vlc import PushButton, Slider, VideoWidget
 from LiverSelect import LiverPanel
 from pay import pay
 import codecs
+import dns.resolver
 from ReportException import thraedingExceptionHandler, uncaughtExceptionHandler,\
     unraisableExceptionHandler, getSystemInfo
 
@@ -102,6 +103,16 @@ class DumpConfig(QThread):
                 f.write(json.dumps(self.config, ensure_ascii=False))
         except Exception as e:
             logging.error(str(e))
+
+class CheckDanmmuProvider(QThread):
+    def __init__(self):
+        super(CheckDanmmuProvider,self).__init__()
+    
+    def run(self):
+        anwsers = dns.resolver.resolve('broadcastlv.chat.bilibili.com', 'A')
+        danmu_ip = anwsers[0].to_text()
+        logging.info("弹幕IP: %s" % danmu_ip)
+
 
 class MainWindow(QMainWindow):
     def __init__(self, cacheFolder, progressBar, progressText):
@@ -338,6 +349,8 @@ class MainWindow(QMainWindow):
         self.mouseTrackTimer.timeout.connect(self.checkMousePos)
         self.mouseTrackTimer.start(100)  # 0.1s检测一次
         progressText.setText('设置UI...')
+        self.checkDanmmuProvider = CheckDanmmuProvider()
+        self.checkDanmmuProvider.start()
         logging.info('UI构造完毕')
 
     def setPlayer(self):

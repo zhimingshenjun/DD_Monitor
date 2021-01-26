@@ -689,6 +689,7 @@ class VideoWidget(QFrame):
             self.getMediaURL.recordToken = False  # 设置停止缓存标志位
             self.getMediaURL.checkTimer.stop()
             self.checkPlaying.stop()
+        logging.debug('vlc开始播放')
 
     def mediaMute(self, force=0, emit=True):
         if force == 1:
