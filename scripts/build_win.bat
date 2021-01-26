@@ -13,8 +13,6 @@ del /F /Q dist\DDMonitor\Qt5Quick.dll
 del /F /Q dist\DDMonitor\Qt5Svg.dll
 del /F /Q dist\DDMonitor\Qt5WebSockets.dll
 
-del /F /Q dist\DDMonitor\libvlc.dylib
-del /F /Q dist\DDMonitor\libvlccore.dylib
 del /F /Q dist\DDMonitor\libEGL.dll
 del /F /Q dist\DDMonitor\libGLESv2.dll
 

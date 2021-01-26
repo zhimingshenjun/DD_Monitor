@@ -4,11 +4,7 @@ block_cipher = None
 
 a = Analysis(['DD监控室.py'],
              pathex=[],
-             binaries=[
-                ('libvlc.dll', '.'),
-                ('libvlccore.dll', '.'),
-                ('plugins', 'plugins'),
-             ],
+             binaries=[],
              datas=[
                 ('utils/ascii.txt', '.'),
                 ('utils/help.html', '.'),
@@ -18,7 +14,7 @@ a = Analysis(['DD监控室.py'],
                 ('scripts/run.bat', '.'),
             ],
              hiddenimports=[],
-             hookspath=[],
+             hookspath=['hooks'],
              runtime_hooks=[],
              excludes=[
                 # PyQt5
