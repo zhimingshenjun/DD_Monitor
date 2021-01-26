@@ -175,7 +175,8 @@ class VideoWidget(QFrame):
     fullScreenKey = pyqtSignal()  # 全屏快捷键
     muteExceptKey = pyqtSignal()  # 除了这个播放器 其他全部静音快捷键
 
-    def __init__(self, id, volume, cacheFolder, top=False, title='', resize=[], textSetting=[True, 20, 2, 6, 0, '【 [ {'], maxCacheSize=2048000, startWithDanmu=True):
+    def __init__(self, id, volume, cacheFolder, top=False, title='', resize=[],
+                 textSetting=[True, 20, 2, 6, 0, '【 [ {', 10], maxCacheSize=2048000, startWithDanmu=True):
         super(VideoWidget, self).__init__()
         self.setAcceptDrops(True)
         self.installEventFilter(self)
@@ -239,6 +240,10 @@ class VideoWidget(QFrame):
         self.setTranslateFilter(self.textSetting[5])  # 同传过滤字符
         self.textBrowser.optionWidget.translateFitler.setText(self.textSetting[5])
         self.textBrowser.optionWidget.translateFitler.textChanged.connect(self.setTranslateFilter)
+        self.setFontSize(self.textSetting[6])  # 设置弹幕字体大小
+        self.textBrowser.optionWidget.fontSizeCombox.setCurrentIndex(self.textSetting[6])
+        self.textBrowser.optionWidget.fontSizeCombox.currentIndexChanged.connect(self.setFontSize)
+
         self.textBrowser.closeSignal.connect(self.closeDanmu)
         self.textBrowser.moveSignal.connect(self.moveTextBrowser)
         if not self.startWithDanmu: # 如果启动隐藏被设置，隐藏弹幕机
@@ -351,15 +356,15 @@ class VideoWidget(QFrame):
         self.horiPercent = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0][index]  # 记录横向占比
         width = self.width() * self.horiPercent
         self.textBrowser.resize(width, self.textBrowser.height())
-        if width > 240:
-            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 17, QFont.Bold))
-            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 17, QFont.Bold))
-        elif 100 < width <= 240:
-            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 5, QFont.Bold))
-            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 5, QFont.Bold))
-        else:
-            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 10, QFont.Bold))
-            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 10, QFont.Bold))
+        # if width > 240:
+        #     self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 17, QFont.Bold))
+        #     self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 17, QFont.Bold))
+        # elif 100 < width <= 240:
+        #     self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 5, QFont.Bold))
+        #     self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 5, QFont.Bold))
+        # else:
+        #     self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 10, QFont.Bold))
+        #     self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 10, QFont.Bold))
         self.textBrowser.textBrowser.verticalScrollBar().setValue(100000000)
         self.textBrowser.transBrowser.verticalScrollBar().setValue(100000000)
         self.setDanmu.emit()
@@ -391,18 +396,24 @@ class VideoWidget(QFrame):
         self.filters = filterWords.split(' ')
         self.setDanmu.emit()
 
+    def setFontSize(self, index):
+        self.textSetting[6] = index
+        self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', index + 5, QFont.Bold))
+        self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', index + 5, QFont.Bold))
+        self.setDanmu.emit()
+
     def resizeEvent(self, QEvent):
         width = self.width() * self.horiPercent
         self.textBrowser.resize(width, self.height() * self.vertPercent)
-        if width > 300:
-            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 16, QFont.Bold))
-            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 16, QFont.Bold))
-        elif 240 < width <= 300:
-            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 1, QFont.Bold))
-            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 1, QFont.Bold))
-        else:
-            self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 12, QFont.Bold))
-            self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 12, QFont.Bold))
+        # if width > 300:
+        #     self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 16, QFont.Bold))
+        #     self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 16, QFont.Bold))
+        # elif 240 < width <= 300:
+        #     self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 1, QFont.Bold))
+        #     self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 1, QFont.Bold))
+        # else:
+        #     self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 12, QFont.Bold))
+        #     self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 12, QFont.Bold))
         self.textBrowser.textBrowser.verticalScrollBar().setValue(100000000)
         self.textBrowser.transBrowser.verticalScrollBar().setValue(100000000)
         self.moveTextBrowser()

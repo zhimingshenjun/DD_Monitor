@@ -156,6 +156,9 @@ class MainWindow(QMainWindow):
             if 'startWithDanmu' not in self.config:
                 self.config['startWithDanmu'] = True
                 logging.warn('启动时加载弹幕没有被设置，默认加载')
+            for danmuConfig in self.config['danmu']:
+                if len(danmuConfig) == 6:
+                    danmuConfig.append(10)
         else:
             self.config = {
                 'roomid': {'21396545': False, '21402309': False, '22384516': False, '8792912': False,
@@ -172,7 +175,7 @@ class MainWindow(QMainWindow):
                 'audioChannel': [0] * 9,
                 'muted': [1] * 9,
                 'volume': [50] * 9,
-                'danmu': [[True, 50, 1, 7, 0, '【 [ {']] * 9,  # 显示弹幕, 透明度, 横向占比, 纵向占比, 显示同传, 同传过滤字符
+                'danmu': [[True, 50, 1, 7, 0, '【 [ {', 10]] * 9,  # 显示,透明,横向,纵向,类型,同传字符,字体大小
                 'globalVolume': 30,
                 'control': True,
                 'hardwareDecode': True,
@@ -197,7 +200,9 @@ class MainWindow(QMainWindow):
         for i in range(9):
             volume = self.config['volume'][i]
             progressText.setText('设置第%s个主层播放器...' % str(i + 1))
-            self.videoWidgetList.append(VideoWidget(i, volume, cacheFolder, textSetting=self.config['danmu'][i], maxCacheSize = self.config['maxCacheSize'], startWithDanmu=self.config['startWithDanmu']))
+            self.videoWidgetList.append(VideoWidget(i, volume, cacheFolder, textSetting=self.config['danmu'][i],
+                                                    maxCacheSize = self.config['maxCacheSize'],
+                                                    startWithDanmu=self.config['startWithDanmu']))
             vlcProgressCounter += 1
             progressBar.setValue(vlcProgressCounter)
             # self.videoWidgetList[i].mutedChanged.connect(self.mutedChanged)  # 硬盘io过高 屏蔽掉 退出的时候统一保存
@@ -217,7 +222,9 @@ class MainWindow(QMainWindow):
             self.videoWidgetList[i].slider.setValue(self.config['volume'][i])
             self.videoWidgetList[i].quality = self.config['quality'][i]
             self.videoWidgetList[i].audioChannel = self.config['audioChannel'][i]
-            self.popVideoWidgetList.append(VideoWidget(i + 9, volume, cacheFolder, True, '悬浮窗', [1280, 720], maxCacheSize=self.config['maxCacheSize'], startWithDanmu=self.config['startWithDanmu']))
+            self.popVideoWidgetList.append(VideoWidget(i + 9, volume, cacheFolder, True, '悬浮窗', [1280, 720],
+                                                       maxCacheSize=self.config['maxCacheSize'],
+                                                       startWithDanmu=self.config['startWithDanmu']))
             vlcProgressCounter += 1
             progressBar.setValue(vlcProgressCounter)
             progressText.setText('设置第%s个悬浮窗播放器...' % str(i + 1))
@@ -553,6 +560,7 @@ class MainWindow(QMainWindow):
     def openFeed(self):
         self.pay.hide()
         self.pay.show()
+        self.pay.thankToBoss.start()
 
     def checkMousePos(self):
         for videoWidget in self.videoWidgetList:  # vlc的播放会直接音量最大化 实在没地方放了 写在这里实时强制修改它的音量
