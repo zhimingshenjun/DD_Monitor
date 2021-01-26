@@ -4,7 +4,9 @@ DD监控室最重要的模块之一 视频播放窗口 现已全部从QMediaPlay
 遇到不确定的播放状态就调用MediaReload()函数 我已经在里面写好了全部的处理 会自动获取直播间状态并进行对应的刷新操作
 '''
 import requests, json, os, time, shutil
-from PyQt5.Qt import *
+from PyQt5.QtWidgets import * 	# QAction,QFileDialog
+from PyQt5.QtGui import *		# QIcon,QPixmap
+from PyQt5.QtCore import * 		# QSize
 from remote import remoteThread
 from danmu import TextBrowser
 import vlc

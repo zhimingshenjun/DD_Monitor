@@ -11,7 +11,9 @@ import ctypes
 ctypes.windll.kernel32.SetDllDirectoryW(None)
 
 import os, sys, json, time, shutil, logging
-from PyQt5.Qt import *
+from PyQt5.QtWidgets import * 	# QAction,QFileDialog
+from PyQt5.QtGui import *		# QIcon,QPixmap
+from PyQt5.QtCore import * 		# QSize
 from LayoutPanel import LayoutSettingPanel
 # from VideoWidget import PushButton, Slider, VideoWidget  # 已弃用
 from VideoWidget_vlc import PushButton, Slider, VideoWidget

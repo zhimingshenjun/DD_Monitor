@@ -1,5 +1,7 @@
 import requests, json
-from PyQt5.Qt import *
+from PyQt5.QtWidgets import * 	# QAction,QFileDialog
+from PyQt5.QtGui import *		# QIcon,QPixmap
+from PyQt5.QtCore import * 		# QSize
 from PyQt5.QtMultimedia import *
 from PyQt5.QtMultimediaWidgets import QGraphicsVideoItem
 from remote import remoteThread
