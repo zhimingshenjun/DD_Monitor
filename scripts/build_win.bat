@@ -1,7 +1,6 @@
 @echo off
 pyinstaller --clean --noconfirm DDMonitor.spec
 mkdir dist\DDMonitor\logs
-mkdir dist\DDMonitor\utils
 copy utils\config_default.json dist\DDMonitor\utils\config.json
 
 rem remove useless dll
@@ -22,3 +21,7 @@ del /F /Q dist\DDMonitor\ucrtbase.dll
 del /F /Q dist\DDMonitor\pyexpat.pyd
 del /F /Q dist\DDMonitor\_decimal.pyd
 del /F /Q dist\DDMonitor\_multiprocessing.pyd
+
+rem Remove dir
+RMDIR /S /Q dist\DDMonitor\PyQt5\Qt\translations
+RMDIR /S /Q dist\DDMonitor\Include
