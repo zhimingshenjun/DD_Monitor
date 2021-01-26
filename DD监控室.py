@@ -9,8 +9,10 @@ import log
 # https://stackoverflow.com/questions/54110504/dynlib-dll-was-no-found-when-the-application-was-frozen-when-i-make-a-exe-fil
 import ctypes
 
-import os, sys, json, time, shutil, logging, platform, threading
-from PyQt5.Qt import *
+import os, sys, json, time, shutil, logging,platform, threading
+from PyQt5.QtWidgets import * 	# QAction,QFileDialog
+from PyQt5.QtGui import *		# QIcon,QPixmap
+from PyQt5.QtCore import * 		# QSize
 from LayoutPanel import LayoutSettingPanel
 # from VideoWidget import PushButton, Slider, VideoWidget  # 已弃用
 from VideoWidget_vlc import PushButton, Slider, VideoWidget

@@ -1,5 +1,7 @@
 import requests
-from PyQt5.Qt import *
+from PyQt5.QtWidgets import * 	# QAction,QFileDialog
+from PyQt5.QtGui import *		# QIcon,QPixmap
+from PyQt5.QtCore import * 		# QSize
 
 
 class DownloadImage(QThread):

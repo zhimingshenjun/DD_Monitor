@@ -3,8 +3,11 @@ DD监控室主界面上方的控制条里的ScrollArea里面的卡片模块
 包含主播开播/下播检测和刷新展示 置顶排序 录制管理等功能
 '''
 import requests, json, time, codecs, logging, os
-from PyQt5.Qt import *
+from PyQt5.QtWidgets import * 	# QAction,QFileDialog
+from PyQt5.QtGui import *		# QIcon,QPixmap
+from PyQt5.QtCore import * 		# QSize
 application_path = ''
+
 header = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'
 }
@@ -296,6 +299,8 @@ class CoverLabel(QLabel):
                     record = menu.addAction('开播自动录制')
             else:  # 录制中或等待录制
                 record = menu.addAction('取消录制')
+
+            menu.addSeparator()  # 添加分割线，防止误操作
             delete = menu.addAction('删除')
             action = menu.exec_(self.mapToGlobal(QMouseEvent.pos()))
             if action == delete:
@@ -517,8 +522,10 @@ class AddLiverRoomWidget(QWidget):
         followsLayout.setContentsMargins(0, 0, 0, 0)
         followsLayout.addWidget(QLabel(), 0, 2, 1, 1)
         followsLayout.addWidget(QLabel('自动添加你关注的up直播间 （只能拉取最近关注的100名）'), 0, 3, 1, 3)
-        self.uidEdit = QLineEdit('请输入你的uid')
-        self.uidEdit.setMaximumWidth(100)
+        self.uidEdit = QLineEdit()
+        self.uidEdit.setPlaceholderText('请输入你的uid')
+        self.uidEdit.setMinimumWidth(120)
+        self.uidEdit.setMaximumWidth(300)
         followsLayout.addWidget(self.uidEdit, 0, 0, 1, 1)
         uidCheckButton = QPushButton('查询')
         uidCheckButton.setFixedHeight(27)
