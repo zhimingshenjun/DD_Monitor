@@ -3,7 +3,9 @@ DD监控室主界面上方的控制条里的ScrollArea里面的卡片模块
 包含主播开播/下播检测和刷新展示 置顶排序 录制管理等功能
 '''
 import requests, json, time, codecs, logging
-from PyQt5.Qt import *
+from PyQt5.QtWidgets import * 	# QAction,QFileDialog
+from PyQt5.QtGui import *		# QIcon,QPixmap
+from PyQt5.QtCore import * 		# QSize
 
 
 header = {
