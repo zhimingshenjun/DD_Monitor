@@ -74,7 +74,7 @@ class pay(QDialog):
 
         self.thankToBoss = thankToBoss()
         self.thankToBoss.bossList.connect(self.updateBossList)
-        self.thankToBoss.start()
+        # self.thankToBoss.start()
 
     def updateQR(self, img):
         self.QR.setPixmap(img)

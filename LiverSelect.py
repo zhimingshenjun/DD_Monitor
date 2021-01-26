@@ -417,19 +417,23 @@ class DownloadVTBList(QThread):
 
     def run(self):
         try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36'}
-            r = requests.get(r'https://github.com/zhimingshenjun/DD_Monitor/blob/master/utils/vtb.csv', headers=headers)
-            vtbList = []
-            html = r.text.split('\n')
-            for cnt, line in enumerate(html):
-                if 'blob-num js-line-number' in line:
-                    vtbID = html[cnt + 1].split('>')[1].split('<')[0]
-                    roomID = html[cnt + 2].split('>')[1].split('<')[0]
-                    haco = html[cnt + 3].split('>')[1].split('<')[0]
-                    vtbList.append('%s,%s,%s\n' % (vtbID, roomID, haco))
-            if vtbList:
-                self.vtbList.emit(vtbList)
+            # TODO 修改vtbs的请求方式
+            pass
+            # headers = {
+            #     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36'}
+            # r = requests.get(r'https://ddmonitor-resource.oss-cn-beijing.aliyuncs.com/vtb.csv', headers=headers)
+            # r.encoding = 'gbk'
+            # vtbList = []
+            # html = r.text.split('\n')
+            # for cnt, line in enumerate(html):
+                # print(line)
+            #     if 'blob-num js-line-number' in line:
+            #         vtbID = html[cnt + 1].split('>')[1].split('<')[0]
+            #         roomID = html[cnt + 2].split('>')[1].split('<')[0]
+            #         haco = html[cnt + 3].split('>')[1].split('<')[0]
+            #         vtbList.append('%s,%s,%s\n' % (vtbID, roomID, haco))
+            # if vtbList:
+            #     self.vtbList.emit(vtbList)
         except Exception as e:
             logging.error(str(e))
 
