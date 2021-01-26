@@ -298,6 +298,8 @@ class CoverLabel(QLabel):
                     record = menu.addAction('开播自动录制')
             else:  # 录制中或等待录制
                 record = menu.addAction('取消录制')
+
+            menu.addSeparator()  # 添加分割线，防止误操作
             delete = menu.addAction('删除')
             action = menu.exec_(self.mapToGlobal(QMouseEvent.pos()))
             if action == delete:
