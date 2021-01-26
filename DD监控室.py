@@ -8,9 +8,8 @@ import log
 # 找不到 dll
 # https://stackoverflow.com/questions/54110504/dynlib-dll-was-no-found-when-the-application-was-frozen-when-i-make-a-exe-fil
 import ctypes
-ctypes.windll.kernel32.SetDllDirectoryW(None)
 
-import os, sys, json, time, shutil, logging
+import os, sys, json, time, shutil, logging, platform, threading
 from PyQt5.Qt import *
 from LayoutPanel import LayoutSettingPanel
 # from VideoWidget import PushButton, Slider, VideoWidget  # 已弃用
@@ -18,7 +17,8 @@ from VideoWidget_vlc import PushButton, Slider, VideoWidget
 from LiverSelect import LiverPanel
 from pay import pay
 import codecs
-import faulthandler
+from ReportException import thraedingExceptionHandler, uncaughtExceptionHandler,\
+    unraisableExceptionHandler, getSystemInfo
 
 
 application_path = ""
@@ -261,7 +261,7 @@ class MainWindow(QMainWindow):
         self.scrollArea.setStyleSheet('border-width:0px')
         self.scrollArea.setMinimumHeight(111)
         self.controlBar.addWidget(self.scrollArea)
-        self.liverPanel = LiverPanel(self.config['roomid'])
+        self.liverPanel = LiverPanel(self.config['roomid'], application_path)
         self.liverPanel.addLiverRoomWidget.getHotLiver.start()
         self.liverPanel.addToWindow.connect(self.addCoverToPlayer)
         self.liverPanel.dumpConfig.connect(self.dumpConfig.start)  # 保存config
@@ -737,6 +737,8 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == '__main__':
+    if platform.system() == 'Windows':
+        ctypes.windll.kernel32.SetDllDirectoryW(None)
     if getattr(sys, 'frozen', False):
         application_path = os.path.dirname(sys.executable)
     elif __file__:
@@ -760,9 +762,14 @@ if __name__ == '__main__':
         qss = f.read()
     app.setStyleSheet(qss)
     app.setFont(QFont('微软雅黑', 9))
-
-    # faulthandler.enable(all_threads=True)
-
+    # 日志采集
+    log.init_log(application_path)
+    sys.excepthook = uncaughtExceptionHandler
+    sys.unraisablehook = unraisableExceptionHandler
+    threading.excepthook = thraedingExceptionHandler
+    sysInfo, gpuInfo = getSystemInfo()
+    logging.info("系统信息: %s" % str(sysInfo))
+    logging.info("GPU信息: %s" % str(gpuInfo))
     # 欢迎页面
     splash = QSplashScreen(QPixmap(os.path.join(application_path, 'utils/splash.jpg')), Qt.WindowStaysOnTopHint)
     progressBar = QProgressBar(splash)

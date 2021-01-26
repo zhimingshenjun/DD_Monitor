@@ -2,14 +2,12 @@
 DD监控室主界面上方的控制条里的ScrollArea里面的卡片模块
 包含主播开播/下播检测和刷新展示 置顶排序 录制管理等功能
 '''
-import requests, json, time, codecs, logging
+import requests, json, time, codecs, logging, os
 from PyQt5.Qt import *
-
-
+application_path = ''
 header = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'
 }
-
 
 class OutlinedLabel(QLabel):
     def __init__(self, text='NA', fontColor='#FFFFFF', outColor='#222222', size=11):
@@ -552,7 +550,7 @@ class AddLiverRoomWidget(QWidget):
         self.hacoTable.setColumnCount(3)
         try:
             self.vtbList = []
-            vtbs = codecs.open('utils/vtb.csv', 'r', 'utf_8')
+            vtbs = codecs.open(os.path.join(application_path,'utils/vtb.csv'), 'r', 'utf_8')
             for line in vtbs:
                 line = line.strip()
                 if line:
@@ -620,7 +618,7 @@ class AddLiverRoomWidget(QWidget):
 
     def collectVTBList(self, vtbList):
         try:
-            vtbs = codecs.open('utils/vtb.csv', 'w', 'utf_8')
+            vtbs = codecs.open(os.path.join(application_path, 'utils/vtb.csv'), 'w', 'utf_8')
             for line in vtbList:
                 vtbs.write(line)
             vtbs.close()
@@ -731,8 +729,9 @@ class LiverPanel(QWidget):
     dumpConfig = pyqtSignal()
     refreshIDList = pyqtSignal(list)
 
-    def __init__(self, roomIDDict):
+    def __init__(self, roomIDDict, app_path):
         super(LiverPanel, self).__init__()
+        application_path = app_path
         self.refreshCount = 0
         self.oldLiveStatus = {}
         self.addLiverRoomWidget = AddLiverRoomWidget()
