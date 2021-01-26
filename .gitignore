@@ -6,6 +6,7 @@ venv/
 
 # Cache & binary & logs
 __pycache__
+*.pyo
 cache/
 build/
 dist/
