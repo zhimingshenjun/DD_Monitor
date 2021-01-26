@@ -14,6 +14,7 @@
  - aiowebsocket
  - python-vlc
  - pyinstaller
+ - dnspython    
 
 ### 打包
 
@@ -28,7 +29,7 @@
  - [ ] ?
 
 ### MacOS平台
- - [ ] 保证程序打包后附带文件可以被访问
+ - [X] 保证程序打包后附带文件可以被访问
  - [ ] 弹幕窗口在启动后不显示
  - [X] 添加热播主播后Thread卡死
  - [ ] ~~添加主播到播放器后不会继承窗口大小，需要重整layout来激活~~ (VLC bug)
