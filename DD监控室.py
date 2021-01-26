@@ -779,7 +779,9 @@ if __name__ == '__main__':
         pass
     cacheFolder = os.path.join(application_path, 'cache/%d' % time.time())  # 初始化缓存文件夹
     os.mkdir(cacheFolder)
+
     # 主程序注释 + 应用qss
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
     with open(os.path.join(application_path, 'utils/qdark.qss'), 'r') as f:
         qss = f.read()
