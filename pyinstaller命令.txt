@@ -1,1 +1,0 @@
-pyinstaller -i favicon.ico -w DD监控室.py

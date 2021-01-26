@@ -37,25 +37,26 @@ class LoggerStream(object):
             handler.flush()
 
 
-log_path = os.path.join('.', r'logs/log-%s.txt' % datetime.datetime.today().strftime('%Y-%m-%d'))
-if sys.stderr:
-    get_submod_log('log').addHandler(logging.StreamHandler())
-    logging.basicConfig(
+def init_log(application_path):
+    log_path = os.path.join(application_path, r'logs/log-%s.txt' % (datetime.datetime.today().strftime('%Y-%m-%d')))
+    if sys.stderr:
+        get_submod_log('log').addHandler(logging.StreamHandler())
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s",
+            handlers=[
+                logging.FileHandler(log_path),
+                logging.StreamHandler()
+            ]
+        )
+    else:
+        logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s",
-        handlers=[
-            logging.FileHandler(log_path),
-            logging.StreamHandler()
-        ]
-    )
-else:
-    logging.basicConfig(
-       level=logging.INFO,
-       format="%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s",
-       filename=log_path,
-       filemode='a'
-    )
+        filename=log_path,
+        filemode='a'
+        )
+    sys.stdout = LoggerStream('STDOUT', logging.INFO, 1)
+    sys.stderr = LoggerStream('STDERR', logging.ERROR, 2)
 
 
-sys.stdout = LoggerStream('STDOUT', logging.INFO, 1)
-sys.stderr = LoggerStream('STDERR', logging.ERROR, 2)

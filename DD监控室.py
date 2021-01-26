@@ -8,9 +8,8 @@ import log
 # 找不到 dll
 # https://stackoverflow.com/questions/54110504/dynlib-dll-was-no-found-when-the-application-was-frozen-when-i-make-a-exe-fil
 import ctypes
-ctypes.windll.kernel32.SetDllDirectoryW(None)
 
-import os, sys, json, time, shutil, logging
+import os, sys, json, time, shutil, logging,platform, threading
 from PyQt5.QtWidgets import * 	# QAction,QFileDialog
 from PyQt5.QtGui import *		# QIcon,QPixmap
 from PyQt5.QtCore import * 		# QSize
@@ -20,7 +19,9 @@ from VideoWidget_vlc import PushButton, Slider, VideoWidget
 from LiverSelect import LiverPanel
 from pay import pay
 import codecs
-import faulthandler
+import dns.resolver
+from ReportException import thraedingExceptionHandler, uncaughtExceptionHandler,\
+    unraisableExceptionHandler, getSystemInfo
 
 
 application_path = ""
@@ -102,6 +103,16 @@ class DumpConfig(QThread):
                 f.write(json.dumps(self.config, ensure_ascii=False))
         except Exception as e:
             logging.error(str(e))
+
+class CheckDanmmuProvider(QThread):
+    def __init__(self):
+        super(CheckDanmmuProvider,self).__init__()
+    
+    def run(self):
+        anwsers = dns.resolver.resolve('broadcastlv.chat.bilibili.com', 'A')
+        danmu_ip = anwsers[0].to_text()
+        logging.info("弹幕IP: %s" % danmu_ip)
+
 
 class MainWindow(QMainWindow):
     def __init__(self, cacheFolder, progressBar, progressText):
@@ -270,7 +281,7 @@ class MainWindow(QMainWindow):
         self.scrollArea.setStyleSheet('border-width:0px')
         self.scrollArea.setMinimumHeight(111)
         self.controlBar.addWidget(self.scrollArea)
-        self.liverPanel = LiverPanel(self.config['roomid'])
+        self.liverPanel = LiverPanel(self.config['roomid'], application_path)
         self.liverPanel.addLiverRoomWidget.getHotLiver.start()
         self.liverPanel.addToWindow.connect(self.addCoverToPlayer)
         self.liverPanel.dumpConfig.connect(self.dumpConfig.start)  # 保存config
@@ -345,6 +356,8 @@ class MainWindow(QMainWindow):
         self.mouseTrackTimer.timeout.connect(self.checkMousePos)
         self.mouseTrackTimer.start(100)  # 0.1s检测一次
         progressText.setText('设置UI...')
+        self.checkDanmmuProvider = CheckDanmmuProvider()
+        self.checkDanmmuProvider.start()
         logging.info('UI构造完毕')
 
     def setPlayer(self):
@@ -747,6 +760,8 @@ class MainWindow(QMainWindow):
 
 
 if __name__ == '__main__':
+    if platform.system() == 'Windows':
+        ctypes.windll.kernel32.SetDllDirectoryW(None)
     if getattr(sys, 'frozen', False):
         application_path = os.path.dirname(sys.executable)
     elif __file__:
@@ -770,9 +785,14 @@ if __name__ == '__main__':
         qss = f.read()
     app.setStyleSheet(qss)
     app.setFont(QFont('微软雅黑', 9))
-
-    # faulthandler.enable(all_threads=True)
-
+    # 日志采集
+    log.init_log(application_path)
+    sys.excepthook = uncaughtExceptionHandler
+    sys.unraisablehook = unraisableExceptionHandler
+    threading.excepthook = thraedingExceptionHandler
+    sysInfo, gpuInfo = getSystemInfo()
+    logging.info("系统信息: %s" % str(sysInfo))
+    logging.info("GPU信息: %s" % str(gpuInfo))
     # 欢迎页面
     splash = QSplashScreen(QPixmap(os.path.join(application_path, 'utils/splash.jpg')), Qt.WindowStaysOnTopHint)
     progressBar = QProgressBar(splash)
