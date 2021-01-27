@@ -731,14 +731,7 @@ class MainWindow(QMainWindow):
 
     def keyPressEvent(self, QEvent):
         if QEvent.key() == Qt.Key_Escape:
-            if self.maximumToken:
-                self.showMaximized()
-            else:
-                self.showNormal()
-            self.optionMenu.menuAction().setVisible(True)
-            self.versionMenu.menuAction().setVisible(True)
-            if self.controlBarToken:
-                self.controlBar.show()
+            self.fullScreen()  # 自动判断全屏状态并退出
         elif QEvent.key() == Qt.Key_F:
             self.fullScreen()
         elif QEvent.key() == Qt.Key_H:
