@@ -203,8 +203,9 @@ class VideoWidget(QFrame):
         self.setObjectName('video')
 
         self.top = top
-        if top:  # 悬浮窗取消关闭按钮 vlc版点关闭后有bug 让用户右键退出
-            self.setWindowFlags(Qt.CustomizeWindowHint | Qt.WindowMinimizeButtonHint | Qt.WindowMaximizeButtonHint)
+        self.name_str = f"悬浮窗{self.id}"if self.top else f"嵌入窗{self.id}"
+        if top:
+            self.setWindowFlags(Qt.Window)
         else:
             self.setStyleSheet('#video{border-width:1px;border-style:solid;border-color:gray}')
         self.textSetting = textSetting
@@ -329,7 +330,7 @@ class VideoWidget(QFrame):
 
         self.checkPlaying = QTimer()  # 检查播放卡住的定时器
         self.checkPlaying.timeout.connect(self.checkPlayStatus)
-        logging.info("VLC 播放器构造完毕, 缓存大小: %dkb , 置顶?: %s, 启用弹幕?: %s" % (self.maxCacheSize, self.top, self.startWithDanmu))
+        logging.info(f"{self.name_str} VLC 播放器构造完毕, 缓存大小: %dkb , 置顶?: %s, 启用弹幕?: %s" % (self.maxCacheSize, self.top, self.startWithDanmu))
 
     def checkPlayStatus(self):  # 播放卡住了
         if not self.player.is_playing() and not self.isHidden() and self.liveStatus != 0 and not self.userPause:
@@ -469,7 +470,7 @@ class VideoWidget(QFrame):
         mimeData.setText('exchange:%s:%s' % (self.id, self.roomID))
         drag.setMimeData(mimeData)
         drag.exec_()
-        logging.debug('drag exchange:%s:%s' % (self.id, self.roomID))
+        logging.debug(f'{self.name_str} drag exchange:%s:%s' % (self.id, self.roomID))
 
     def dragEnterEvent(self, QDragEnterEvent):
         QDragEnterEvent.accept()
@@ -533,9 +534,10 @@ class VideoWidget(QFrame):
         chooseAmp_4 = chooseAmplify.addAction('x 4.0')
         if self.volumeAmplify == 4.0:
             chooseAmp_4.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
+
         if not self.top:  # 非弹出类悬浮窗
             popWindow = menu.addAction('悬浮窗播放')
-        else:
+        else:  # 弹出的悬浮窗
             opacityMenu = menu.addMenu('调节透明度 ►')
             percent100 = opacityMenu.addAction('100%')
             if self.opacity == 100:
@@ -554,6 +556,7 @@ class VideoWidget(QFrame):
                 percent20.setIcon(self.style().standardIcon(QStyle.SP_DialogApplyButton))
             fullScreen = menu.addAction('退出全屏') if self.isFullScreen() else menu.addAction('全屏')
             exit = menu.addAction('退出')
+
         action = menu.exec_(self.mapToGlobal(event.pos()))
         if action == exportCache:
             if self.cacheName and os.path.exists(self.cacheName):
@@ -635,6 +638,16 @@ class VideoWidget(QFrame):
                 self.mediaStop()
                 self.textBrowser.hide()
 
+    def closeEvent(self, event):
+        """拦截关闭按钮事件，隐藏弹出的悬浮窗
+        修改务必同步右键菜单的退出事件："action == exit"
+        """
+        event.ignore()  # 忽略关闭事件
+        self.hide()
+        self.mediaStop()
+        self.textBrowser.hide()
+        logging.debug(f"{self.name_str}隐藏")
+
     def exportFinish(self, result):
         self.exportTip.hide()
         if result[0]:
@@ -700,6 +713,7 @@ class VideoWidget(QFrame):
             self.getMediaURL.recordToken = False  # 设置停止缓存标志位
             self.getMediaURL.checkTimer.stop()
             self.checkPlaying.stop()
+        logging.debug(f"{self.name_str}按下暂停/播放键")
 
     def mediaMute(self, force=0, emit=True):
         if force == 1:

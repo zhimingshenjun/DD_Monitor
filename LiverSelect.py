@@ -2,16 +2,14 @@
 DD监控室主界面上方的控制条里的ScrollArea里面的卡片模块
 包含主播开播/下播检测和刷新展示 置顶排序 录制管理等功能
 '''
-import requests, json, time, codecs, logging
+import requests, json, time, codecs, logging, os
 from PyQt5.QtWidgets import * 	# QAction,QFileDialog
 from PyQt5.QtGui import *		# QIcon,QPixmap
 from PyQt5.QtCore import * 		# QSize
 
-
 header = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'
 }
-
 
 class OutlinedLabel(QLabel):
     def __init__(self, text='NA', fontColor='#FFFFFF', outColor='#222222', size=11):
@@ -464,8 +462,9 @@ class HotLiverTable(QTableWidget):
 class AddLiverRoomWidget(QWidget):
     roomList = pyqtSignal(list)
 
-    def __init__(self):
+    def __init__(self,application_path):
         super(AddLiverRoomWidget, self).__init__()
+        self.application_path = application_path
         self.resize(600, 900)
         self.setWindowTitle('添加直播间（房号太多的话尽量分批次添加 避免卡死）')
         self.hotLiverDict = {0: [], 1: [], 2: [], 3: [], 4: [], 5: []}
@@ -508,6 +507,10 @@ class AddLiverRoomWidget(QWidget):
         self.buttonList = [self.virtual, self.onlineGame, self.mobileGame, self.consoleGame, self.entertainment]
         self.currentPage = 0
 
+        self.progressBar = QProgressBar(self)
+        self.progressBar.setGeometry(0, 0, self.width(), 20)
+        self.progressBar.setRange(0,0)
+
         self.hotLiverTable = HotLiverTable()
         self.hotLiverTable.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.hotLiverTable.verticalScrollBar().installEventFilter(self)
@@ -519,6 +522,7 @@ class AddLiverRoomWidget(QWidget):
         self.hotLiverTable.setColumnWidth(0, 130)
         self.hotLiverTable.setColumnWidth(1, 240)
         self.hotLiverTable.setColumnWidth(2, 130)
+        self.hotLiverTable.setEnabled(False) #启动时暂时禁用table
         hotLiverLayout.addWidget(self.hotLiverTable, 1, 0, 1, 5)
         self.getHotLiver = GetHotLiver()
         self.getHotLiver.roomInfoSummary.connect(self.collectHotLiverInfo)
@@ -563,7 +567,7 @@ class AddLiverRoomWidget(QWidget):
         self.hacoTable.setColumnCount(3)
         try:
             self.vtbList = []
-            vtbs = codecs.open('utils/vtb.csv', 'r', 'utf_8')
+            vtbs = codecs.open(os.path.join(self.application_path,'utils/vtb.csv'), 'r', 'utf_8')
             for line in vtbs:
                 line = line.strip()
                 if line:
@@ -591,8 +595,15 @@ class AddLiverRoomWidget(QWidget):
         tab.addTab(hacoPage, '个人势/箱')
         tab.addTab(followsPage, '关注添加')
 
+    def closeEvent(self, event):
+        if self.getHotLiver.isRunning():
+            self.getHotLiver.terminate()
+
+
     def collectHotLiverInfo(self, info):
         self.hotLiverDict = {}
+        self.progressBar.hide()
+        self.hotLiverTable.setEnabled(True)
         for page, hotLiverList in enumerate(info):
             self.hotLiverDict[page] = hotLiverList
             for y, line in enumerate(hotLiverList):
@@ -631,7 +642,7 @@ class AddLiverRoomWidget(QWidget):
 
     def collectVTBList(self, vtbList):
         try:
-            vtbs = codecs.open('utils/vtb.csv', 'w', 'utf_8')
+            vtbs = codecs.open(os.path.join(self.application_path, 'utils/vtb.csv'), 'w', 'utf_8')
             for line in vtbList:
                 vtbs.write(line)
             vtbs.close()
@@ -639,6 +650,7 @@ class AddLiverRoomWidget(QWidget):
             logging.error(str(e))
 
     def sendSelectedRoom(self):
+        self.closeEvent(None)
         tmpList = self.roomEdit.text().strip().replace('\t', ' ').split(' ')
         roomList = []
         for i in tmpList:
@@ -707,6 +719,7 @@ class CollectLiverInfo(QThread):
         self.roomIDList = roomIDList
 
     def run(self):
+        logging.debug("Collecting Liver Info...")
         while 1:
             liverInfo = []
             data = json.dumps({'ids': self.roomIDList})  # 根据直播间房号批量获取直播间信息
@@ -744,11 +757,12 @@ class LiverPanel(QWidget):
     dumpConfig = pyqtSignal()
     refreshIDList = pyqtSignal(list)
 
-    def __init__(self, roomIDDict):
+    def __init__(self, roomIDDict, app_path):
         super(LiverPanel, self).__init__()
+        self.application_path = app_path
         self.refreshCount = 0
         self.oldLiveStatus = {}
-        self.addLiverRoomWidget = AddLiverRoomWidget()
+        self.addLiverRoomWidget = AddLiverRoomWidget(self.application_path)
         self.addLiverRoomWidget.roomList.connect(self.addLiverRoomList)
         self.addLiverRoomWidget.hotLiverTable.addToWindow.connect(self.addCoverToPlayer)
         self.layout = QHBoxLayout(self)
@@ -777,6 +791,7 @@ class LiverPanel(QWidget):
         self.addLiverRoomWidget.show()
 
     def addLiverRoomList(self, roomList):
+        logging.debug("接收到新的主播列表")
         newID = []
         for roomID in roomList:  # 如果id不在老列表里面 则添加
             if len(roomID) <= 4:  # 查询短号
@@ -796,6 +811,7 @@ class LiverPanel(QWidget):
             self.roomIDDict[str(roomID)] = False  # 添加普通卡片 字符串类型
         self.collectLiverInfo.setRoomIDList(list(map(int, self.roomIDDict.keys())))  # 更新需要刷新的房间列表
         self.collectLiverInfo.terminate()
+        self.collectLiverInfo.wait()
         self.collectLiverInfo.start()
         self.dumpConfig.emit()  # 发送保存config信号
 

@@ -37,7 +37,7 @@ class remoteThread(QThread):
                 await converse.send(bytes.fromhex(data_raw))
                 tasks = [self.receDM(converse), self.sendHeartBeat(converse)]
                 await asyncio.wait(tasks)
-            except Error as e:
+            except Exception as e:
                 logging.error(e)
 
     async def sendHeartBeat(self, websocket):
@@ -97,5 +97,5 @@ class remoteThread(QThread):
         try:
             asyncio.set_event_loop(asyncio.new_event_loop())
             asyncio.get_event_loop().run_until_complete(self.startup(remote))
-        except Error as e:
+        except Exception as e:
             logging.error(e)
