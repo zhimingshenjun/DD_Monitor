@@ -399,6 +399,7 @@ class GetFollows(QThread):
             if followsIDs:
                 data = json.dumps({'uids': followsIDs})
                 r = requests.post(r'https://api.live.bilibili.com/room/v1/Room/get_status_info_by_uids', data=data)
+                r.encoding = 'utf8'
                 data = json.loads(r.text)['data']
                 for followID in followsIDs:
                     for uid, info in data.items():
@@ -710,12 +711,14 @@ class CollectLiverInfo(QThread):
             liverInfo = []
             data = json.dumps({'ids': self.roomIDList})  # 根据直播间房号批量获取直播间信息
             r = requests.post(r'https://api.live.bilibili.com/room/v2/Room/get_by_ids', data=data)
+            r.encoding = 'utf8'
             data = json.loads(r.text)['data']
             uidList = []
             for roomID in data:
                 uidList.append(data[roomID]['uid'])
             data = json.dumps({'uids': uidList})
             r = requests.post(r'https://api.live.bilibili.com/room/v1/Room/get_status_info_by_uids', data=data)
+            r.encoding = 'utf8'
             data = json.loads(r.text)['data']
             if data:
                 for roomID in self.roomIDList:
