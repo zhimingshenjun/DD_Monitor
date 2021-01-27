@@ -14,9 +14,9 @@ import platform
 import logging
 
 header = {
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36',
+    'Referer': 'https://live.bilibili.com'
 }
-
 
 class PushButton(QPushButton):
     def __init__(self, icon='', text=''):
@@ -89,6 +89,7 @@ class GetMediaURL(QThread):
             url = json.loads(r.text)['data']['durl'][0]['url']
             fileName = '%s/%s.flv' % (self.cacheFolder, self.id)
             download = requests.get(url, stream=True, headers=header)
+            logging.debug(download.headers)
             self.recordToken = True
             contentCnt = 0
             while True:
