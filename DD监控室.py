@@ -90,8 +90,9 @@ class DumpConfig(QThread):
             configJSONPath = os.path.join(application_path, r'utils/config.json')
             with codecs.open(configJSONPath, 'w', 'utf8') as f:
                 f.write(json.dumps(self.config, ensure_ascii=False))
-        except Exception as e:
-            logging.error(str(e))
+        except:
+            logging.exception('config.json 写入失败')
+
         try:  # 备份 防止存储config时崩溃
             configJSONPath = os.path.join(application_path, r'utils/config_备份%d.json' % self.backupNumber)
             self.backupNumber += 1
@@ -101,8 +102,9 @@ class DumpConfig(QThread):
             #     f.write(json.dumps(self.config, ensure_ascii=False))
             with codecs.open(configJSONPath, 'w', 'utf8') as f:
                 f.write(json.dumps(self.config, ensure_ascii=False))
-        except Exception as e:
-            logging.error(str(e))
+        except:
+            logging.exception('config_备份.json 备份配置文件写入失败')
+
 
 class CheckDanmmuProvider(QThread):
     def __init__(self):
@@ -129,8 +131,8 @@ class MainWindow(QMainWindow):
                     with codecs.open(self.configJSONPath, 'r', 'utf8') as f:
                         self.config = json.loads(f.read())
                     # self.config = json.loads(open(self.configJSONPath).read())
-                except Exception as e:
-                    print(str(e))
+                except:
+                    logging.exception('json 配置读取失败')
                     self.config = {}
         if not self.config:  # 读取config失败 尝试读取备份
             for backupNumber in [1, 2, 3]:  # 备份预设123
@@ -141,6 +143,7 @@ class MainWindow(QMainWindow):
                             self.config = json.loads(open(self.configJSONPath).read())
                             break
                         except:
+                            logging.exception('json 备份配置读取失败')
                             self.config = {}
         if self.config:  # 如果能成功读取到config文件
             while len(self.config['player']) < 9:
@@ -163,10 +166,10 @@ class MainWindow(QMainWindow):
                 self.config['hardwareDecode'] = True
             if 'maxCacheSize' not in self.config:
                 self.config['maxCacheSize'] = 2048000
-                logging.warn('最大缓存没有被设置，使用默认1G')
+                logging.warning('最大缓存没有被设置，使用默认1G')
             if 'startWithDanmu' not in self.config:
                 self.config['startWithDanmu'] = True
-                logging.warn('启动时加载弹幕没有被设置，默认加载')
+                logging.warning('启动时加载弹幕没有被设置，默认加载')
             for danmuConfig in self.config['danmu']:
                 if len(danmuConfig) == 6:
                     danmuConfig.append(10)
@@ -610,7 +613,7 @@ class MainWindow(QMainWindow):
                     if self.config['danmu'][index][0] and not videoWidget.isHidden():  # 显示弹幕机
                         videoWidget.textBrowser.show()
         except:
-            pass
+            logging.exception('弹幕姬隐藏/显示切换出错')
 
     def closeEvent(self, QCloseEvent):
         self.hide()
@@ -687,8 +690,8 @@ class MainWindow(QMainWindow):
                 with open(self.savePath, 'w') as f:
                     f.write(json.dumps(self.config, ensure_ascii=False))
                 QMessageBox.information(self, '导出预设', '导出完成', QMessageBox.Ok)
-            except Exception as e:
-                logging.error(str(e))
+            except:
+                logging.exception('json 配置导出失败')
 
     def importConfig(self):
         jsonPath = QFileDialog.getOpenFileName(self, "选择预设", None, "*.json")[0]
@@ -698,6 +701,7 @@ class MainWindow(QMainWindow):
                 try:
                     config = json.loads(open(jsonPath).read())
                 except:
+                    logging.exception('json 配置导入失败')
                     config = {}
                 if config:  # 如果能成功读取到config文件
                     self.config = config
@@ -731,14 +735,7 @@ class MainWindow(QMainWindow):
 
     def keyPressEvent(self, QEvent):
         if QEvent.key() == Qt.Key_Escape:
-            if self.maximumToken:
-                self.showMaximized()
-            else:
-                self.showNormal()
-            self.optionMenu.menuAction().setVisible(True)
-            self.versionMenu.menuAction().setVisible(True)
-            if self.controlBarToken:
-                self.controlBar.show()
+            self.fullScreen()  # 自动判断全屏状态并退出
         elif QEvent.key() == Qt.Key_F:
             self.fullScreen()
         elif QEvent.key() == Qt.Key_H:
@@ -776,10 +773,12 @@ if __name__ == '__main__':
         for cacheFolder in os.listdir(cachePath):
             shutil.rmtree(os.path.join(application_path, 'cache/%s' % cacheFolder))
     except:
-        pass
+        logging.exception('清除缓存失败')
     cacheFolder = os.path.join(application_path, 'cache/%d' % time.time())  # 初始化缓存文件夹
     os.mkdir(cacheFolder)
+
     # 主程序注释 + 应用qss
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
     with open(os.path.join(application_path, 'utils/qdark.qss'), 'r') as f:
         qss = f.read()
