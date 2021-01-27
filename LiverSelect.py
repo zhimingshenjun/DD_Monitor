@@ -150,8 +150,8 @@ class RecordThread(QThread):
                     self.downloadToken = True
                     self.cacheVideo.write(chunk)
             self.cacheVideo.close()
-        except Exception as e:
-            logging.error(str(e))
+        except:
+            logging.exception("下载视频到缓存失败")
 
 
 class DownloadImage(QThread):
@@ -371,7 +371,7 @@ class GetHotLiver(QThread):
             if roomInfoSummary:
                 self.roomInfoSummary.emit(roomInfoSummary)
         except:
-            pass
+            logging.exception('房间信息获取失败')
 
 
 class GetFollows(QThread):
@@ -435,8 +435,8 @@ class DownloadVTBList(QThread):
             #         vtbList.append('%s,%s,%s\n' % (vtbID, roomID, haco))
             # if vtbList:
             #     self.vtbList.emit(vtbList)
-        except Exception as e:
-            logging.error(str(e))
+        except:
+            logging.exception("vtbs 列表获取失败")
 
 
 class HotLiverTable(QTableWidget):
@@ -580,8 +580,9 @@ class AddLiverRoomWidget(QWidget):
             for y, line in enumerate(self.vtbList):
                 for x in range(3):
                     self.hacoTable.setItem(y, x, QTableWidgetItem(line[x]))
-        except Exception as e:
-            logging.error(str(e))
+        except:
+            logging.exception('vtb.csv 解析失败')
+
         self.hacoTable.setHorizontalHeaderLabels(['主播名', '直播间房号', '所属'])
         self.hacoTable.setColumnWidth(0, 160)
         self.hacoTable.setColumnWidth(1, 160)
@@ -599,7 +600,6 @@ class AddLiverRoomWidget(QWidget):
         if self.getHotLiver.isRunning():
             self.getHotLiver.terminate()
 
-
     def collectHotLiverInfo(self, info):
         self.hotLiverDict = {}
         self.progressBar.hide()
@@ -612,7 +612,7 @@ class AddLiverRoomWidget(QWidget):
                         try:
                             self.hotLiverTable.setItem(y, x, QTableWidgetItem(txt))
                         except:
-                            pass
+                            logging.exception('热门直播表插入失败')
 
     def switchHotLiver(self, index):
         if not self.buttonList[index].pushToken:
@@ -638,7 +638,7 @@ class AddLiverRoomWidget(QWidget):
                     try:
                         self.hotLiverTable.setItem(y, x, QTableWidgetItem(txt))
                     except:
-                        pass
+                        logging.exception('热门直播表更换失败')
 
     def collectVTBList(self, vtbList):
         try:
@@ -646,8 +646,8 @@ class AddLiverRoomWidget(QWidget):
             for line in vtbList:
                 vtbs.write(line)
             vtbs.close()
-        except Exception as e:
-            logging.error(str(e))
+        except:
+            logging.exception('vtb.csv 写入失败')
 
     def sendSelectedRoom(self):
         self.closeEvent(None)
@@ -668,8 +668,8 @@ class AddLiverRoomWidget(QWidget):
             if roomID not in addedRoomID:
                 addedRoomID += ' %s' % roomID
                 self.roomEdit.setText(addedRoomID)
-        except Exception as e:
-            logging.error(str(e))
+        except:
+            logging.exception('热门主播添加失败')
 
     def hacoAdd(self, row):
         try:
@@ -680,7 +680,7 @@ class AddLiverRoomWidget(QWidget):
                     addedRoomID += ' %s' % roomID
                     self.roomEdit.setText(addedRoomID)
         except:
-            pass
+            logging.exception('hacoAdd 失败')
 
     def checkFollows(self):
         if self.uidEdit.text().isdigit():
@@ -695,7 +695,7 @@ class AddLiverRoomWidget(QWidget):
                 try:
                     self.followsTable.setItem(y, x, QTableWidgetItem(txt))
                 except:
-                    pass
+                    logging.exception('关注列表添加失败')
 
     def followLiverAdd(self, row):
         try:
@@ -705,7 +705,7 @@ class AddLiverRoomWidget(QWidget):
                 addedRoomID += ' %s' % roomID
                 self.roomEdit.setText(addedRoomID)
         except:
-            pass
+            logging.exception('关注列表添加失败')
 
 
 class CollectLiverInfo(QThread):
@@ -800,7 +800,7 @@ class LiverPanel(QWidget):
                     data = json.loads(r.text)['data']
                     roomID = data['room_info']['room_id']
                 except:
-                    pass
+                    logging.exception('房间号查询失败')
             if roomID not in self.roomIDDict:
                 newID.append(roomID)
         for index, roomID in enumerate(newID):  # 添加id并创建新的预览图卡
