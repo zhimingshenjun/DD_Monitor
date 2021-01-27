@@ -51,7 +51,7 @@ def init_log(application_path):
         )
     else:
         logging.basicConfig(
-        level=logging.ERROR,
+        level=logging.INFO,
         format="%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s",
         filename=log_path,
         filemode='a'
