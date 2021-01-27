@@ -203,6 +203,7 @@ class VideoWidget(QFrame):
         self.setObjectName('video')
 
         self.top = top
+        self.name_str = f"悬浮窗{self.id}"if self.top else f"嵌入播放器{self.id}"
         if top:
             self.setWindowFlags(Qt.Window)
         else:
@@ -645,6 +646,7 @@ class VideoWidget(QFrame):
         self.hide()
         self.mediaStop()
         self.textBrowser.hide()
+        logging.debug(f"{self.name_str}隐藏")
 
     def exportFinish(self, result):
         self.exportTip.hide()
@@ -711,7 +713,7 @@ class VideoWidget(QFrame):
             self.getMediaURL.recordToken = False  # 设置停止缓存标志位
             self.getMediaURL.checkTimer.stop()
             self.checkPlaying.stop()
-        logging.debug('vlc开始播放')
+        logging.debug(f"{self.name_str}按下暂停/播放键")
 
     def mediaMute(self, force=0, emit=True):
         if force == 1:
