@@ -110,8 +110,8 @@ class GetMediaURL(QThread):
                         self.cacheName.emit(fileName)
             self.cacheVideo.close()
             os.remove(fileName)  # 清除缓存
-        except Exception as e:
-            logging.error(str(e))
+        except:
+            logging.exception('直播地址获取失败 / 缓存视频出错')
 
 
 class VideoFrame(QFrame):
@@ -148,8 +148,8 @@ class ExportCache(QThread):
         try:
             shutil.copy(self.ori, self.dst)
             self.finish.emit([True, self.dst])  # 导出成功
-        except Exception as e:  # 导出失败
-            logging.error(e)
+        except:
+            logging.exception('导出缓存失败')
             self.finish.emit([False, self.dst])
 
 
@@ -672,7 +672,7 @@ class VideoWidget(QFrame):
         try:
             self.danmu.message.disconnect(self.playDanmu)
         except:
-            pass
+            logging.exception('停止弹幕出错')
         self.danmu.terminate()
 
     def showDanmu(self):
@@ -756,7 +756,7 @@ class VideoWidget(QFrame):
         try:
             self.danmu.message.disconnect(self.playDanmu)
         except:
-            pass
+            logging.exception('停止弹幕出错')
         self.getMediaURL.recordToken = False
         self.getMediaURL.checkTimer.stop()
         self.checkPlaying.stop()
@@ -771,7 +771,7 @@ class VideoWidget(QFrame):
         try:
             self.danmu.message.disconnect(self.playDanmu)
         except:
-            pass
+            logging.exception('停止弹幕出错')
         if self.startWithDanmu:
             self.danmu.message.connect(self.playDanmu)
             self.danmu.terminate()

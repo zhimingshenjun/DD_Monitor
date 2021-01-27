@@ -10,6 +10,7 @@ from aiowebsocket.converses import AioWebSocket
 from PyQt5.QtCore import QThread, pyqtSignal
 import logging
 
+
 class remoteThread(QThread):
     message = pyqtSignal(str)
 
@@ -37,8 +38,8 @@ class remoteThread(QThread):
                 await converse.send(bytes.fromhex(data_raw))
                 tasks = [self.receDM(converse), self.sendHeartBeat(converse)]
                 await asyncio.wait(tasks)
-            except Exception as e:
-                logging.error(e)
+            except:
+                logging.exception('弹幕Socket打开失败')
 
     async def sendHeartBeat(self, websocket):
         logging.debug("向%s发送心跳包" % self.roomID)
@@ -86,8 +87,8 @@ class remoteThread(QThread):
                 #     self.message.emit('%s投喂了%s个%s' % (d['uname'], d['batch_combo_num'], d['gift_name']))
                 # elif jd['cmd'] == 'GUARD_BUY':
                 #     self.message.emit('%s上了舰长' % jd['data']['username'])
-            except Exception as e:
-                logging.error(e)
+            except:
+                logging.exception('弹幕输出失败')
 
     def setRoomID(self, roomID):
         self.roomID = roomID
@@ -97,5 +98,5 @@ class remoteThread(QThread):
         try:
             asyncio.set_event_loop(asyncio.new_event_loop())
             asyncio.get_event_loop().run_until_complete(self.startup(remote))
-        except Exception as e:
-            logging.error(e)
+        except:
+            logging.exception('弹幕主循环出错')
