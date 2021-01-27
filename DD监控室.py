@@ -166,10 +166,10 @@ class MainWindow(QMainWindow):
                 self.config['hardwareDecode'] = True
             if 'maxCacheSize' not in self.config:
                 self.config['maxCacheSize'] = 2048000
-                logging.warn('最大缓存没有被设置，使用默认1G')
+                logging.warning('最大缓存没有被设置，使用默认1G')
             if 'startWithDanmu' not in self.config:
                 self.config['startWithDanmu'] = True
-                logging.warn('启动时加载弹幕没有被设置，默认加载')
+                logging.warning('启动时加载弹幕没有被设置，默认加载')
             for danmuConfig in self.config['danmu']:
                 if len(danmuConfig) == 6:
                     danmuConfig.append(10)
