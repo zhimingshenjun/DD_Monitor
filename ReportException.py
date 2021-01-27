@@ -34,7 +34,7 @@ def thraedingExceptionHandler(exc_type,exc_value,exc_traceback,thread):
     showFaultDialog(err_type=exc_type, err_value=exc_value, tb=exc_traceback)
 
 
-def getSystemInfo():
+def loggingSystemInfo():
     systemCmd = ""
     gpuCmd = ""
     if platform.system() == 'Windows':
@@ -59,7 +59,8 @@ def getSystemInfo():
         gpuInfoProcessReturn = gpuInfoProcessReturn.strip()
         gpuInfoProcessReturn = gpuInfoProcessReturn.replace("\n\n", "\n")
 
-    return systemInfoProcessReturn, gpuInfoProcessReturn
+    logging.info(f"系统信息: \n{systemInfoProcessReturn}")
+    logging.info(f"GPU信息: \n{gpuInfoProcessReturn}")
 
 
 def showFaultDialog(err_type, err_value, tb):
