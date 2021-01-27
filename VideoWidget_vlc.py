@@ -434,7 +434,7 @@ class VideoWidget(QFrame):
             danmuX, danmuY = self.textBrowser.x(), self.textBrowser.y()  # textBrowser坐标本身就是globalPos
         danmuW, danmuH = self.textBrowser.width(), self.textBrowser.height()
         smaller = False  # 弹幕机尺寸大于播放窗
-        if danmuW > videoW or danmuH > videoH:
+        if danmuW > videoW or danmuH > videoH + 5:  # +5是为了在100%纵向的时候可以左右拖 有的屏幕计算会略微超过一两个像素
             danmuX, danmuY = videoX, videoY
             smaller = True
         if not smaller:
