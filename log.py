@@ -45,7 +45,7 @@ def init_log(application_path):
             level=logging.INFO,
             format="%(asctime)s [%(threadName)-12.12s] [%(levelname)-5.5s]  %(message)s",
             handlers=[
-                logging.FileHandler(log_path),
+                logging.FileHandler(log_path,'w','utf-8'),
                 logging.StreamHandler()
             ]
         )
