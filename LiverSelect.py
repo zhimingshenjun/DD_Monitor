@@ -220,8 +220,12 @@ class CoverLabel(QLabel):
     def updateLabel(self, info):
         if not info[0]:  # 用户或直播间不存在
             self.liveState = -1
-            self.titleLabel.setText('错误的房号')
-            self.stateLabel.setText('无该房间')
+            if info[2]:
+                self.titleLabel.setText(info[2])
+                self.stateLabel.setText('房间可能被封')
+            else:
+                self.titleLabel.setText('错误的房号')
+                self.stateLabel.setText('无该房间')
             self.setStyleSheet('background-color:#8B3A3A')  # 红色背景
         else:
             if self.firstUpdateToken:  # 初始化
@@ -746,7 +750,17 @@ class CollectLiverInfo(QThread):
                             liverInfo.append([uid, str(roomID), uname, face, liveStatus, keyFrame])
                             break
                     if not exist:
-                        liverInfo.append([None, str(roomID)])
+                        r = requests.get(r'https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=%s' % roomID)
+                        r.encoding = 'utf8'
+                        banData = json.loads(r.text)['data']
+                        if banData:
+                            try:
+                                uname = banData['anchor_info']['base_info']['uname']
+                            except:
+                                uname = ''
+                        else:
+                            uname = ''
+                        liverInfo.append([None, str(roomID), uname])
             if liverInfo:
                 self.liverInfo.emit(liverInfo)
             time.sleep(20)  # 冷却时间
