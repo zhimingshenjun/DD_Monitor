@@ -1,2 +1,2 @@
 #!/bin/zsh
-pyinstaller --clean --noconfirm DDMonitor_unix.spec
+pyinstaller --clean --noconfirm DDMonitor_macos.spec
