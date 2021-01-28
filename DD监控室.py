@@ -88,7 +88,7 @@ class DumpConfig(QThread):
     def run(self):
         try:
             configJSONPath = os.path.join(application_path, r'utils/config.json')
-            with codecs.open(configJSONPath, 'w', 'utf8') as f:
+            with codecs.open(configJSONPath, 'w', encoding='utf-8') as f:
                 f.write(json.dumps(self.config, ensure_ascii=False))
         except:
             logging.exception('config.json 写入失败')
@@ -100,7 +100,7 @@ class DumpConfig(QThread):
                 self.backupNumber = 1
             # with open(configJSONPath, 'w') as f:
             #     f.write(json.dumps(self.config, ensure_ascii=False))
-            with codecs.open(configJSONPath, 'w', 'utf8') as f:
+            with codecs.open(configJSONPath, 'w', encoding='utf-8') as f:
                 f.write(json.dumps(self.config, ensure_ascii=False))
         except:
             logging.exception('config_备份.json 备份配置文件写入失败')
@@ -128,7 +128,7 @@ class MainWindow(QMainWindow):
         if os.path.exists(self.configJSONPath):  # 读取config
             if os.path.getsize(self.configJSONPath):
                 try:
-                    with codecs.open(self.configJSONPath, 'r', 'utf8') as f:
+                    with codecs.open(self.configJSONPath, 'r', encoding='utf-8') as f:
                         self.config = json.loads(f.read())
                     # self.config = json.loads(open(self.configJSONPath).read())
                 except:

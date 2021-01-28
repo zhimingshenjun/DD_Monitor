@@ -567,7 +567,7 @@ class AddLiverRoomWidget(QWidget):
         self.hacoTable.setColumnCount(3)
         try:
             self.vtbList = []
-            vtbs = codecs.open(os.path.join(self.application_path,'utils/vtb.csv'), 'r', 'utf_8')
+            vtbs = codecs.open(os.path.join(self.application_path,'utils/vtb.csv'), 'r', encoding='utf-8')
             for line in vtbs:
                 line = line.strip()
                 if line:
@@ -642,7 +642,7 @@ class AddLiverRoomWidget(QWidget):
 
     def collectVTBList(self, vtbList):
         try:
-            vtbs = codecs.open(os.path.join(self.application_path, 'utils/vtb.csv'), 'w', 'utf_8')
+            vtbs = codecs.open(os.path.join(self.application_path, 'utils/vtb.csv'), 'w', encoding='utf-8')
             for line in vtbList:
                 vtbs.write(line)
             vtbs.close()
