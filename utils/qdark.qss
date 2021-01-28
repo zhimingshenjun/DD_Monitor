@@ -24,7 +24,7 @@ QToolTip {
     background-color: #5A7566;
     color: white;
     padding: 0px;                /*remove padding, for fix combobox tooltip.*/
-    opacity: 200;
+    opacity: 255;
 }
 
 QWidget {

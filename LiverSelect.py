@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import * 	# QAction,QFileDialog
 from PyQt5.QtGui import *		# QIcon,QPixmap
 from PyQt5.QtCore import * 		# QSize
 
+
 header = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'
 }
@@ -156,11 +157,13 @@ class RecordThread(QThread):
 
 class DownloadImage(QThread):
     img = pyqtSignal(QPixmap)
+    img_origin = pyqtSignal(QPixmap)
 
-    def __init__(self, scaleW, scaleH):
+    def __init__(self, scaleW, scaleH, keyFrame=False):
         super(DownloadImage, self).__init__()
         self.W = scaleW
         self.H = scaleH
+        self.keyFrame = keyFrame
 
     def setUrl(self, url):
         self.url = url
@@ -172,6 +175,8 @@ class DownloadImage(QThread):
             r = requests.get(self.url)
         img = QPixmap.fromImage(QImage.fromData(r.content))
         self.img.emit(img.scaled(self.W, self.H, Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
+        if self.keyFrame:
+            self.img_origin.emit(img)
 
 
 class CoverLabel(QLabel):
@@ -181,10 +186,12 @@ class CoverLabel(QLabel):
 
     def __init__(self, roomID, topToken=False):
         super(CoverLabel, self).__init__()
+        QToolTip.setFont(QFont('微软雅黑', 16, QFont.Bold))
         self.setAcceptDrops(True)
         self.roomID = roomID
         self.topToken = topToken
-        self.title = 'NA'
+        self.title = 'NA'  # 这里其实一开始设计的时候写错名字了 实际这里是用户名不是房间号 将错就错下去了
+        self.roomTitle = ''  # 这里才是真的存放房间名的地方
         self.recordState = 0  # 0 无录制任务  1 录制中  2 等待开播录制
         self.savePath = ''
         self.setFixedSize(160, 90)
@@ -210,8 +217,9 @@ class CoverLabel(QLabel):
         self.layout.addWidget(self.stateLabel, 2, 0, 1, 6)
         self.downloadFace = DownloadImage(60, 60)
         self.downloadFace.img.connect(self.updateProfile)
-        self.downloadKeyFrame = DownloadImage(160, 90)
+        self.downloadKeyFrame = DownloadImage(160, 90, True)
         self.downloadKeyFrame.img.connect(self.updateKeyFrame)
+        self.downloadKeyFrame.img_origin.connect(self.setToolTipKeyFrame)
 
         self.recordThread = RecordThread(roomID)
         self.recordThread.downloadTimer.connect(self.refreshStateLabel)
@@ -220,6 +228,8 @@ class CoverLabel(QLabel):
     def updateLabel(self, info):
         if not info[0]:  # 用户或直播间不存在
             self.liveState = -1
+            self.roomTitle = ''
+            self.setToolTip(self.roomTitle)
             if info[2]:
                 self.titleLabel.setText(info[2])
                 self.stateLabel.setText('房间可能被封')
@@ -239,8 +249,12 @@ class CoverLabel(QLabel):
                 self.liveState = 1
                 self.downloadKeyFrame.setUrl(info[5])  # 启动下载关键帧线程
                 self.downloadKeyFrame.start()
+                self.roomTitle = info[6]  # 房间直播标题
+                # self.setToolTip(self.roomTitle)  # 改用self.setToolTipKeyFrame里面设置tooltip
             else:  # 未开播
                 self.liveState = 0
+                self.roomTitle = ''  # 房间直播标题
+                self.setToolTip(self.roomTitle)
                 self.clear()
                 if self.topToken:
                     self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#dfa616;background-color:#708090}')
@@ -274,6 +288,14 @@ class CoverLabel(QLabel):
 
     def updateKeyFrame(self, img):
         self.setPixmap(img)
+
+    def setToolTipKeyFrame(self, img):
+        buffer = QBuffer()
+        buffer.open(QIODevice.WriteOnly)
+        img.save(buffer, "PNG", quality=100)
+        image = bytes(buffer.data().toBase64()).decode()
+        html = '<img src="data:image/png;base64,{}">'.format(image)
+        self.setToolTip('<b>%s</b><br>%s<br/>' % (self.roomTitle.strip(), html))
 
     def dragEnterEvent(self, QDragEnterEvent):
         QDragEnterEvent.acceptProposedAction()
@@ -742,12 +764,13 @@ class CollectLiverInfo(QThread):
                     exist = False
                     for uid, info in data.items():
                         if roomID == info['room_id']:
+                            title = info['title']
                             uname = info['uname']
                             face = info['face']
                             liveStatus = info['live_status']
                             keyFrame = info['keyframe']
                             exist = True
-                            liverInfo.append([uid, str(roomID), uname, face, liveStatus, keyFrame])
+                            liverInfo.append([uid, str(roomID), uname, face, liveStatus, keyFrame, title])
                             break
                     if not exist:
                         r = requests.get(r'https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=%s' % roomID)
