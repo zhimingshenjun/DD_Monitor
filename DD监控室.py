@@ -733,14 +733,14 @@ class MainWindow(QMainWindow):
             else:
                 videoWidget.mediaMute(2)  # 静音
 
-    def keyPressEvent(self, QEvent):
-        if QEvent.key() == Qt.Key_Escape:
+    def keyPressEvent(self, QKeyEvent):
+        if QKeyEvent.key() == Qt.Key_Escape:
             self.fullScreen()  # 自动判断全屏状态并退出
-        elif QEvent.key() == Qt.Key_F:
+        elif QKeyEvent.key() == Qt.Key_F:
             self.fullScreen()
-        elif QEvent.key() == Qt.Key_H:
+        elif QKeyEvent.key() == Qt.Key_H:
             self.openControlPanel()
-        elif QEvent.key() == Qt.Key_M or QKeyEvent.key() == Qt.Key_S:
+        elif QKeyEvent.key() == Qt.Key_M or QKeyEvent.key() == Qt.Key_S:
             self.muteExcept()
 
     def addCoverToPlayer(self, info):  # 窗口 房号
