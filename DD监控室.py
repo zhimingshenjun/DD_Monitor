@@ -76,7 +76,7 @@ class HotKey(QWidget):
         layout = QGridLayout(self)
         layout.addWidget(QLabel('F、f —— 全屏'), 0, 0)
         layout.addWidget(QLabel('H、h —— 隐藏控制条'), 1, 0)
-        layout.addWidget(QLabel('M、m —— 除当前鼠标悬停窗口外全部静音'), 2, 0)
+        layout.addWidget(QLabel('M、m、S、s —— 除当前鼠标悬停窗口外全部静音'), 2, 0)
 
 
 class DumpConfig(QThread):
@@ -740,7 +740,7 @@ class MainWindow(QMainWindow):
             self.fullScreen()
         elif QEvent.key() == Qt.Key_H:
             self.openControlPanel()
-        elif QEvent.key() == Qt.Key_M:
+        elif QEvent.key() == Qt.Key_M or QKeyEvent.key() == Qt.Key_S:
             self.muteExcept()
 
     def addCoverToPlayer(self, info):  # 窗口 房号

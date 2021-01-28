@@ -834,5 +834,5 @@ class VideoWidget(QFrame):
             self.hideBarKey.emit()
         elif QKeyEvent.key() == Qt.Key_F:
             self.fullScreenKey.emit()
-        elif QKeyEvent.key() == Qt.Key_M:
+        elif QKeyEvent.key() == Qt.Key_M or QKeyEvent.key() == Qt.Key_S:
             self.muteExceptKey.emit()  # 这里调用self.id为啥是0???
