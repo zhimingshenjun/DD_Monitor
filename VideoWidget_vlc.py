@@ -405,10 +405,10 @@ class VideoWidget(QFrame):
         self.setDanmu.emit()
 
     def resizeEvent(self, QEvent):
-        self.titleLabel.hide() if self.width() < 500 else self.titleLabel.show()
-        self.play.hide() if self.width() < 450 else self.play.show()
-        self.danmuButton.hide() if self.width() < 400 else self.danmuButton.show()
-        self.slider.hide() if self.width() < 300 else self.slider.show()
+        self.titleLabel.hide() if self.width() < 350 else self.titleLabel.show()
+        self.play.hide() if self.width() < 300 else self.play.show()
+        self.danmuButton.hide() if self.width() < 250 else self.danmuButton.show()
+        self.slider.hide() if self.width() < 200 else self.slider.show()
         width = self.width() * self.horiPercent
         self.textBrowser.resize(width, self.height() * self.vertPercent)
         # if width > 300:
