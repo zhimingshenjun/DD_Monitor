@@ -21,7 +21,7 @@ from pay import pay
 import codecs
 import dns.resolver
 from ReportException import thraedingExceptionHandler, uncaughtExceptionHandler,\
-    unraisableExceptionHandler, getSystemInfo
+    unraisableExceptionHandler, loggingSystemInfo
 
 
 application_path = ""
@@ -789,9 +789,8 @@ if __name__ == '__main__':
     sys.excepthook = uncaughtExceptionHandler
     sys.unraisablehook = unraisableExceptionHandler
     threading.excepthook = thraedingExceptionHandler
-    sysInfo, gpuInfo = getSystemInfo()
-    logging.info("系统信息: %s" % str(sysInfo))
-    logging.info("GPU信息: %s" % str(gpuInfo))
+    loggingSystemInfo()
+
     # 欢迎页面
     splash = QSplashScreen(QPixmap(os.path.join(application_path, 'utils/splash.jpg')), Qt.WindowStaysOnTopHint)
     progressBar = QProgressBar(splash)

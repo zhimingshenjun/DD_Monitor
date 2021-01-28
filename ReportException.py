@@ -1,6 +1,7 @@
 import os, sys, time, datetime, subprocess, logging, traceback, platform
 from PyQt5.Qt import *
 
+
 def uncaughtExceptionHandler(exctype, value, tb):
     logging.error("\n************!!!UNCAUGHT EXCEPTION!!!*********************\n" +
                   ("Type: %s" % exctype) + '\n' +
@@ -9,6 +10,7 @@ def uncaughtExceptionHandler(exctype, value, tb):
                     " ".join(traceback.format_tb(tb)) +
                   "************************************************************\n")
     showFaultDialog(err_type=exctype, err_value=value, tb=tb)
+
 
 def unraisableExceptionHandler(exc_type,exc_value,exc_traceback,err_msg,object):
     logging.error("\n************!!!UNHANDLEABLE EXCEPTION!!!******************\n" +
@@ -21,6 +23,7 @@ def unraisableExceptionHandler(exc_type,exc_value,exc_traceback,err_msg,object):
                   "************************************************************\n")
     showFaultDialog(err_type=exc_type, err_value=exc_value, tb=exc_traceback)
 
+
 def thraedingExceptionHandler(exc_type,exc_value,exc_traceback,thread):
     logging.error("\n************!!!UNCAUGHT THREADING EXCEPTION!!!***********\n" +
                   ("Type: %s" % exc_type) + '\n' +
@@ -30,12 +33,16 @@ def thraedingExceptionHandler(exc_type,exc_value,exc_traceback,thread):
                   "************************************************************\n")
     showFaultDialog(err_type=exc_type, err_value=exc_value, tb=exc_traceback)
 
-def getSystemInfo():
+
+def loggingSystemInfo():
     systemCmd = ""
     gpuCmd = ""
     if platform.system() == 'Windows':
-        systemCmd = "C:\Windows\System32\systeminfo.exe"
-        gpuCmd = "C:\Windows\System32\wbem\WMIC.exe PATH Win32_videocontroller GET Description /format:list"
+        systemCmd = r"C:\Windows\System32\systeminfo.exe"
+        wmi_exe = r"C:\Windows\System32\wbem\WMIC.exe"
+        # cmd 下运行 "wmic PATH win32_VideoController GET /?" 查看可查询的参数列表
+        gpu_property_list = "AdapterCompatibility, Caption, DeviceID, DriverDate, DriverVersion, VideoModeDescription"
+        gpuCmd = f"{wmi_exe} PATH win32_VideoController GET {gpu_property_list} /FORMAT:list"
     elif platform.system() == 'Darwin':
         systemCmd = "/usr/sbin/system_profiler SPHardwareDataType"
         gpuCmd = "/usr/sbin/system_profiler SPDisplaysDataType"
@@ -45,10 +52,16 @@ def getSystemInfo():
 
     systemInfoProcess = subprocess.Popen(systemCmd, shell=True, stdout=subprocess.PIPE,universal_newlines=True)
     systemInfoProcessReturn = systemInfoProcess.stdout.read()
-    gpuInfoProcess = subprocess.Popen(gpuCmd,
-                                      shell=True, stdout=subprocess.PIPE,universal_newlines=True)
+    gpuInfoProcess = subprocess.Popen(gpuCmd, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
     gpuInfoProcessReturn = gpuInfoProcess.stdout.read()
-    return systemInfoProcessReturn, gpuInfoProcessReturn
+
+    if platform.system() == 'Windows':
+        gpuInfoProcessReturn = gpuInfoProcessReturn.strip()
+        gpuInfoProcessReturn = gpuInfoProcessReturn.replace("\n\n", "\n")
+
+    logging.info(f"系统信息: \n{systemInfoProcessReturn}")
+    logging.info(f"GPU信息: \n{gpuInfoProcessReturn}")
+
 
 def showFaultDialog(err_type, err_value, tb):
     msg = QMessageBox()
