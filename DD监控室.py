@@ -32,16 +32,31 @@ def _translate(context, text, disambig):
 
 
 class ScrollArea(QScrollArea):
+    multipleTimes = pyqtSignal(int)
+
     def __init__(self):
         super(ScrollArea, self).__init__()
+        self.multiple = self.width() // 160
 
     def wheelEvent(self, QEvent):
         if QEvent.angleDelta().y() < 0:
-            value = self.horizontalScrollBar().value()
-            self.horizontalScrollBar().setValue(value + 80)
+            value = self.verticalScrollBar().value()
+            self.verticalScrollBar().setValue(value + 80)
         elif QEvent.angleDelta().y() > 0:
-            value = self.horizontalScrollBar().value()
-            self.horizontalScrollBar().setValue(value - 80)
+            value = self.verticalScrollBar().value()
+            self.verticalScrollBar().setValue(value - 80)
+
+    def resizeEvent(self, QResizeEvent):
+        multiple = self.width() // 160
+        if multiple != self.multiple:
+            self.multiple = multiple
+            self.multipleTimes.emit(multiple)
+
+
+class DockWidget(QDockWidget):
+    def __init__(self, title, parent):
+        super(DockWidget, self).__init__(parent)
+        self.setWindowTitle(title)
 
 
 class Version(QWidget):
@@ -246,28 +261,36 @@ class MainWindow(QMainWindow):
             logging.info("VLC设置完毕 %s / 9" % str(i + 1))
         self.setPlayer()
 
-        self.controlBar = QToolBar()
-        self.addToolBar(self.controlBar)
-        self.controlBar.show() if self.config['control'] else self.controlBar.hide()
+        self.controlDock = DockWidget('控制条', self)
+        self.controlDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+        self.controlDock.setFloating(True)
+        controlWidget = QWidget()
+        self.controlDock.setWidget(controlWidget)
+        self.controlBarLayout = QGridLayout(controlWidget)
+        self.controlDock.show() if self.config['control'] else self.controlDock.hide()
 
         self.globalPlayToken = True
         self.play = PushButton(self.style().standardIcon(QStyle.SP_MediaPause))
         self.play.clicked.connect(self.globalMediaPlay)
-        self.controlBar.addWidget(self.play)
+        self.controlBarLayout.addWidget(self.play, 0, 0, 1, 1)
         self.reload = PushButton(self.style().standardIcon(QStyle.SP_BrowserReload))
         self.reload.clicked.connect(self.globalMediaReload)
-        self.controlBar.addWidget(self.reload)
+        self.controlBarLayout.addWidget(self.reload, 0, 1, 1, 1)
+        self.stop = PushButton(self.style().standardIcon(QStyle.SP_DialogCancelButton))
+        self.stop.clicked.connect(self.globalMediaStop)
+        self.controlBarLayout.addWidget(self.stop, 0, 2, 1, 1)
+        self.danmuButton = PushButton(text='弹')
+        self.globalDanmuToken = True
+        self.danmuButton.clicked.connect(self.globalDanmuShow)
+        self.controlBarLayout.addWidget(self.danmuButton, 0, 3, 1, 1)
         self.globalMuteToken = False
         self.volumeButton = PushButton(self.style().standardIcon(QStyle.SP_MediaVolume))
         self.volumeButton.clicked.connect(self.globalMediaMute)
-        self.controlBar.addWidget(self.volumeButton)
+        self.controlBarLayout.addWidget(self.volumeButton, 1, 0, 1, 1)
         self.slider = Slider()
         self.slider.setValue(self.config['globalVolume'])
         self.slider.value.connect(self.globalSetVolume)
-        self.controlBar.addWidget(self.slider)
-        self.stop = PushButton(self.style().standardIcon(QStyle.SP_DialogCancelButton))
-        self.stop.clicked.connect(self.globalMediaStop)
-        self.controlBar.addWidget(self.stop)
+        self.controlBarLayout.addWidget(self.slider, 1, 1, 1, 3)
         progressText.setText('设置播放器控制...')
 
         self.addButton = QPushButton('+')
@@ -276,25 +299,25 @@ class MainWindow(QMainWindow):
         self.addButton.setFont(QFont('Arial', 24, QFont.Bold))
         progressText.setText('设置添加控制...')
 
-        self.controlBar.addWidget(self.addButton)
-        self.controlBar.addWidget(QLabel())
+        self.controlBarLayout.addWidget(self.addButton, 2, 0, 1, 4)
         progressText.setText('设置全局控制...')
 
         self.scrollArea = ScrollArea()
         self.scrollArea.setStyleSheet('border-width:0px')
         self.scrollArea.setMinimumHeight(111)
-        self.controlBar.addWidget(self.scrollArea)
+        self.controlBarLayout.addWidget(self.scrollArea, 3, 0, 1, 10)
         self.liverPanel = LiverPanel(self.config['roomid'], application_path)
         self.liverPanel.addLiverRoomWidget.getHotLiver.start()
         self.liverPanel.addToWindow.connect(self.addCoverToPlayer)
         self.liverPanel.dumpConfig.connect(self.dumpConfig.start)  # 保存config
         self.liverPanel.refreshIDList.connect(self.refreshPlayerStatus)  # 刷新播放器
         self.scrollArea.setWidget(self.liverPanel)
+        self.scrollArea.multipleTimes.connect(self.changeLiverPanelLayout)
         self.addButton.clicked.connect(self.liverPanel.openLiverRoomPanel)
         progressText.setText('设置主播选择控制...')
 
         self.optionMenu = self.menuBar().addMenu('设置')
-        self.controlBarToken = self.config['control']
+        self.controlBarLayoutToken = self.config['control']
         layoutConfigAction = QAction('布局方式', self, triggered=self.openLayoutSetting)
         self.optionMenu.addAction(layoutConfigAction)
         globalQualityMenu = self.optionMenu.addMenu('全局画质 ►')
@@ -504,6 +527,14 @@ class MainWindow(QMainWindow):
         for videoWidget in self.videoWidgetList:
             videoWidget.mediaStop()
 
+    def globalDanmuShow(self):
+        self.globalDanmuToken = not self.globalDanmuToken
+        for videoWidget in self.videoWidgetList:
+            if not videoWidget.isHidden():
+                videoWidget.textBrowser.show() if self.globalDanmuToken else videoWidget.textBrowser.hide()
+        for danmuConfig in self.config['danmu']:
+            danmuConfig[0] = self.globalDanmuToken
+
     def globalQuality(self, quality):
         for videoWidget in self.videoWidgetList:
             if not videoWidget.isHidden():  # 窗口没有被隐藏
@@ -526,9 +557,9 @@ class MainWindow(QMainWindow):
         self.config['hardwareDecode'] = hardwareDecodeToken
 
     def openControlPanel(self):
-        self.controlBar.hide() if self.controlBarToken else self.controlBar.show()
-        self.controlBarToken = not self.controlBarToken
-        self.config['control'] = self.controlBarToken
+        self.controlDock.hide() if self.controlBarLayoutToken else self.controlDock.show()
+        self.controlBarLayoutToken = not self.controlBarLayoutToken
+        self.config['control'] = self.controlBarLayoutToken
         # self.dumpConfig.start()
 
     def openVersion(self):
@@ -659,6 +690,10 @@ class MainWindow(QMainWindow):
         self.config['layout'] = layoutConfig
         self.dumpConfig.start()
 
+    def changeLiverPanelLayout(self, multiple):
+        self.liverPanel.multiple = multiple
+        self.liverPanel.refreshPanel()
+
     def fullScreen(self):
         if self.isFullScreen():  # 退出全屏
             if self.maximumToken:
@@ -668,8 +703,8 @@ class MainWindow(QMainWindow):
             self.optionMenu.menuAction().setVisible(True)
             self.versionMenu.menuAction().setVisible(True)
             self.payMenu.menuAction().setVisible(True)
-            if self.controlBarToken:
-                self.controlBar.show()
+            if self.controlBarLayoutToken:
+                self.controlDock.show()
         else:  # 全屏
             for videoWidget in self.videoWidgetList:
                 videoWidget.fullScreen = True
@@ -677,8 +712,8 @@ class MainWindow(QMainWindow):
             self.optionMenu.menuAction().setVisible(False)
             self.versionMenu.menuAction().setVisible(False)
             self.payMenu.menuAction().setVisible(False)
-            if self.controlBarToken:
-                self.controlBar.hide()
+            if self.controlBarLayoutToken:
+                self.controlDock.hide()
             for videoWidget in self.videoWidgetList:
                 videoWidget.fullScreen = True
             self.showFullScreen()

@@ -320,7 +320,6 @@ class VideoWidget(QFrame):
 
         self.danmu = remoteThread(self.roomID)
 
-
         self.exportCache = ExportCache()
         self.exportCache.finish.connect(self.exportFinish)
         self.exportTip = ExportTip()

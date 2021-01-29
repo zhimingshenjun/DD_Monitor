@@ -802,9 +802,10 @@ class LiverPanel(QWidget):
         self.addLiverRoomWidget = AddLiverRoomWidget(self.application_path)
         self.addLiverRoomWidget.roomList.connect(self.addLiverRoomList)
         self.addLiverRoomWidget.hotLiverTable.addToWindow.connect(self.addCoverToPlayer)
-        self.layout = QHBoxLayout(self)
+        self.multiple = 1
+        self.layout = QGridLayout(self)
         self.layout.setSpacing(5)
-        self.layout.setContentsMargins(2, 2, 2, 2)
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.coverList = []
         for roomID, topToken in roomIDDict.items():
             self.coverList.append(CoverLabel(roomID, topToken))
@@ -903,13 +904,21 @@ class LiverPanel(QWidget):
         self.dumpConfig.emit()  # 发送保存config信号
 
     def refreshPanel(self):
+        print(1)
+        tmpList = []
         for topToken in [True, False]:
             for liveState in [1, 0, -1]:  # 按顺序添加正在直播的 没在直播的 还有错误的卡片
                 for cover in self.coverList:
-                    if cover.liveState == liveState and cover.topToken == topToken:  # 符合条件的卡片
-                        self.layout.addWidget(cover)
-        for cover in self.coverList:
-            cover.hide()
-            if cover.liveState in [1, 0, -1] and cover.roomID != '0':
-                cover.show()
+                    if cover.liveState == liveState and cover.topToken == topToken and cover.roomID != '0':  # 符合条件的卡片
+                        tmpList.append(cover)
+                    else:
+                        cover.hide()
+                        # self.layout.addWidget(cover)
+        # for cover in self.coverList:
+        #     cover.hide()
+        #     if cover.liveState in [1, 0, -1] and cover.roomID != '0':
+        #         cover.show()
+        for cnt, cover in enumerate(tmpList):
+            self.layout.addWidget(cover, cnt // self.multiple, cnt % self.multiple)
+            cover.show()
         self.adjustSize()
