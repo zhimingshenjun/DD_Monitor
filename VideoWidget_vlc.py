@@ -82,11 +82,15 @@ class GetMediaURL(QThread):
         self.quality = quality
 
     def run(self):
-        maxCount = {10000: 1500, 400: 1000, 250: 800, 80: 500}[self.quality]
         api = r'https://api.live.bilibili.com/room/v1/Room/playUrl?cid=%s&platform=web&qn=%s' % (self.roomID, self.quality)
         r = requests.get(api)
         try:
             url = json.loads(r.text)['data']['durl'][0]['url']
+            # if 'qn=' in url:  # 计算等待时长 已弃用
+            #     actualQuality = int(url.split('qn=')[1].split('&')[0])
+            # else:
+            #     actualQuality = self.quality
+            # maxCount = {10000: 100, 400: 100, 250: 100, 80: 100}[actualQuality]
             fileName = '%s/%s.flv' % (self.cacheFolder, self.id)
             download = requests.get(url, stream=True, headers=header)
             logging.debug(download.headers)
@@ -107,7 +111,7 @@ class GetMediaURL(QThread):
                     contentCnt += 1
                     if not contentCnt % self.maxCacheSize:  # 缓存超过用户设置的缓存大小（默认1GB）清除缓存刷新一次 原画大约要20分钟-30分钟
                         self.downloadError.emit()
-                    elif contentCnt == maxCount:
+                    elif contentCnt == 100:
                         self.cacheName.emit(fileName)
             self.cacheVideo.close()
             os.remove(fileName)  # 清除缓存
@@ -336,7 +340,12 @@ class VideoWidget(QFrame):
 
     def checkPlayStatus(self):  # 播放卡住了
         if not self.player.is_playing() and not self.isHidden() and self.liveStatus != 0 and not self.userPause:
-            self.mediaReload()  # 刷新一下
+            self.retryTimes += 1
+            if self.retryTimes > 5:  # 5秒内未刷新
+                self.mediaReload()  # 彻底刷新
+            else:
+                self.player.stop()  # 不完全刷新
+                self.player.play()
 
     def initTextPos(self):  # 初始化弹幕机位置
         videoPos = self.mapToGlobal(self.videoFrame.pos())
@@ -752,7 +761,6 @@ class VideoWidget(QFrame):
                 self.getMediaURL.setConfig(self.roomID, self.quality)  # 设置房号和画质
                 self.getMediaURL.start()  # 开始缓存视频
                 self.getMediaURL.checkTimer.start(3000)  # 启动监测定时器
-                self.checkPlaying.start(3000)  # 启动播放卡顿检测定时器
         else:
             self.mediaStop()
 
@@ -775,6 +783,7 @@ class VideoWidget(QFrame):
         self.danmu.wait()
 
     def setMedia(self, cacheName):
+        self.retryTimes = 0
         self.cacheName = cacheName
         self.play.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
         self.danmu.setRoomID(self.roomID)
@@ -795,6 +804,7 @@ class VideoWidget(QFrame):
         self.player.audio_set_channel(self.audioChannel)
         self.player.play()
         self.moveTimer.start()  # 启动移动弹幕窗的timer
+        self.checkPlaying.start(1000)  # 启动播放卡顿检测定时器
 
     def setTitle(self):
         if self.roomID == '0':
