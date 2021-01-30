@@ -573,9 +573,19 @@ class MainWindow(QMainWindow):
         self.config['hardwareDecode'] = hardwareDecodeToken
 
     def openControlPanel(self):
-        self.controlDock.show() if self.controlDock.isHidden() else self.controlDock.hide()
-        # self.config['control'] = not self.controlDock.isHidden()  # 不用记录这个标志位了 每次启动强制显示控制条
-        # self.dumpConfig.start()
+        if self.controlDock.isHidden():
+            self.controlDock.show()
+            if not self.isFullScreen():
+                self.optionMenu.menuAction().setVisible(True)
+                self.versionMenu.menuAction().setVisible(True)
+                self.payMenu.menuAction().setVisible(True)
+        else:
+            self.controlDock.hide()
+            if not self.isFullScreen():
+                self.optionMenu.menuAction().setVisible(False)
+                self.versionMenu.menuAction().setVisible(False)
+                self.payMenu.menuAction().setVisible(False)
+        self.controlBarLayoutToken = self.controlDock.isHidden()
 
     def openVersion(self):
         self.version.hide()
@@ -754,6 +764,7 @@ class MainWindow(QMainWindow):
                     logging.exception('json 配置导入失败')
                     config = {}
                 if config:  # 如果能成功读取到config文件
+                    config['roomid'].update(self.config['roomid'])  # 添加现有直播间
                     self.config = config
                     while len(self.config['player']) < 9:
                         self.config['player'].append(0)
