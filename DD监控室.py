@@ -427,22 +427,33 @@ class MainWindow(QMainWindow):
         fromVideo.id, toVideo.id = toID, fromID  # 交换id
         fromVideo.topLabel.setText(fromVideo.topLabel.text().replace('窗口%s' % (fromID + 1), '窗口%s' % (toID + 1)))
         toVideo.topLabel.setText(toVideo.topLabel.text().replace('窗口%s' % (toID + 1), '窗口%s' % (fromID + 1)))
-        # fromMuted, toMuted = self.config['muted'][fromID], self.config['muted'][toID]  # 获取原来的静音设置
-        # fromVolume, toVolume = self.config['volume'][fromID], self.config['volume'][toID]  # 获取原来的音量
-        fromVideoPos = fromVideo.mapToGlobal(fromVideo.videoFrame.pos())  # 保持弹幕框相对位置
-        toVideoPos = toVideo.mapToGlobal(toVideo.videoFrame.pos())
-        fromTextDelta, toTextDelta = fromVideo.textPosDelta, toVideo.textPosDelta
-        fromVideo.textBrowser.move(toVideoPos + fromTextDelta)
-        toVideo.textBrowser.move(fromVideoPos + toTextDelta)
-        # fromVideo.mediaMute(toMuted)  # 交换静音设置
-        # fromVideo.setVolume(toVolume)  # 交换音量
-        # toVideo.mediaMute(fromMuted)
-        # toVideo.setVolume(fromVolume)
+
+        fromWidth, fromHeight = fromVideo.width(), fromVideo.height()
+        toWidth, toHeight = toVideo.width(), toVideo.height()
+        if 3 < abs(fromWidth - toWidth) or 3 < abs(fromHeight - toHeight):  # 有主次关系的播放窗交换同时交换音量
+            fromMuted = 2 if fromVideo.player.audio_get_mute() else 1
+            toMuted = 2 if toVideo.player.audio_get_mute() else 1
+            fromVolume, toVolume = fromVideo.player.audio_get_volume(), toVideo.player.audio_get_volume()  # 音量值
+            fromVideo.mediaMute(toMuted)  # 交换静音设置
+            fromVideo.setVolume(toVolume)  # 交换音量
+            toVideo.mediaMute(fromMuted)
+            toVideo.setVolume(fromVolume)
         self.videoWidgetList[fromID], self.videoWidgetList[toID] = toVideo, fromVideo  # 交换控件列表
         self.config['player'][toID] = fromRoomID  # 记录config
         self.config['player'][fromID] = toRoomID
         self.dumpConfig.start()
-        self.changeLayout(self.config['layout'])  # 刷新layout
+        # self.changeLayout(self.config['layout'])  # 刷新layout
+        fromLayout, toLayout = self.config['layout'][fromID], self.config['layout'][toID]  # 用新的方法直接交换两个窗口
+        y, x, h, w = fromLayout
+        self.mainLayout.addWidget(toVideo, y, x, h, w)
+        y, x, h, w = toLayout
+        self.mainLayout.addWidget(fromVideo, y, x, h, w)
+
+        # TODO: 改崩溃了 不想改了 怎么改都没法按比例调整弹幕窗坐标
+        # fromVideoPos = fromVideo.mapToGlobal(fromVideo.pos())  # 保持弹幕框相对位置
+        # toVideoPos = toVideo.mapToGlobal(toVideo.pos())
+        # fromVideo.textBrowser.move(toVideoPos + QPoint(toWidth * fromVideo.deltaX, toHeight * fromVideo.deltaY))
+        # toVideo.textBrowser.move(fromVideoPos + QPoint(fromWidth * toVideo.deltaX, fromHeight * toVideo.deltaY))
 
     def setDanmu(self):
         self.dumpConfig.start()

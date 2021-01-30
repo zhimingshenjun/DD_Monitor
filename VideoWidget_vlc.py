@@ -253,6 +253,8 @@ class VideoWidget(QFrame):
             self.textBrowser.hide()
 
         self.textPosDelta = QPoint(0, 0)  # 弹幕框和窗口之间的坐标差
+        self.deltaX = 0
+        self.deltaY = 0
 
         self.videoFrame = VideoFrame()  # 新版本vlc内核播放器
         self.videoFrame.rightClicked.connect(self.rightMouseClicked)
@@ -426,7 +428,6 @@ class VideoWidget(QFrame):
     def moveEvent(self, QMoveEvent):  # 理论上给悬浮窗同步弹幕机用的moveEvent 但不生效 但是又不能删掉 不然交换窗口弹幕机有bug
         videoPos = self.mapToGlobal(self.videoFrame.pos())  # videoFrame的坐标要转成globalPos
         self.textBrowser.move(videoPos + self.textPosDelta)
-        self.textPosDelta = self.textBrowser.pos() - videoPos
 
     def moveTextBrowser(self, point=None):
         videoPos = self.mapToGlobal(self.videoFrame.pos())  # videoFrame的坐标要转成globalPos
@@ -452,6 +453,7 @@ class VideoWidget(QFrame):
                 danmuY = videoY + videoH - danmuH
         self.textBrowser.move(danmuX, danmuY)
         self.textPosDelta = self.textBrowser.pos() - videoPos
+        self.deltaX, self.deltaY = self.textPosDelta.x() / self.width(), self.textPosDelta.y() / self.height()
 
     def enterEvent(self, QEvent):
         self.hoverToken = True
