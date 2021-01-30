@@ -285,6 +285,7 @@ class CoverLabel(QLabel):
 
     def recordError(self, roomID):
         self.recordThread.checkTimer.stop()
+        self.refreshStateLabel()
         QMessageBox.information(self, '录制中止', '%s 录制结束 请检查网络或主播是否掉线' % roomID, QMessageBox.Ok)
 
     def updateProfile(self, img):
@@ -356,7 +357,8 @@ class CoverLabel(QLabel):
             elif action == record:
                 if self.roomID != '0':
                     if self.recordState == 0:  # 无录制任务
-                        saveName = '%s_%s' % (self.title, time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time())))
+                        saveName = '%s_%s_%s' % (self.title, self.roomTitle,
+                                                 time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time())))
                         self.savePath = QFileDialog.getSaveFileName(self, "选择保存路径", saveName, "*.flv")[0]
                         if self.savePath:  # 保存路径有效
                             if self.liveState == 1:  # 直播中
