@@ -10,11 +10,26 @@
 
 ### 所需包
  - PyQt5
+
  - requests
+
  - aiowebsocket
+
  - python-vlc
+
  - pyinstaller
+
  - dnspython    
+
+   
+
+   pip安装
+
+   ```
+   pip install -r requirements.txt
+   ```
+
+   
 
 ### 打包
 
