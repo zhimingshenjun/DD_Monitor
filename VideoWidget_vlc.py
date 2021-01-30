@@ -754,7 +754,7 @@ class VideoWidget(QFrame):
         self.getMediaURL.recordToken = False  # 设置停止缓存标志位
         self.getMediaURL.checkTimer.stop()
         self.checkPlaying.stop()
-        self.player.stop()
+        self.player.pause()
         if self.roomID != '0':
             self.setTitle()  # 同时获取最新直播状态
             if self.liveStatus == 1:  # 直播中
