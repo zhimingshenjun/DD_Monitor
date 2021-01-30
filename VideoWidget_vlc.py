@@ -341,7 +341,7 @@ class VideoWidget(QFrame):
     def checkPlayStatus(self):  # 播放卡住了
         if not self.player.is_playing() and not self.isHidden() and self.liveStatus != 0 and not self.userPause:
             self.retryTimes += 1
-            if self.retryTimes > 5:  # 5秒内未刷新
+            if self.retryTimes > 10:  # 10秒内未刷新
                 self.mediaReload()  # 彻底刷新
             else:
                 self.player.stop()  # 不完全刷新
