@@ -329,7 +329,7 @@ class CoverLabel(QLabel):
                     record = menu.addAction('开播自动录制')
             else:  # 录制中或等待录制
                 record = menu.addAction('取消录制')
-
+            openBrowser = menu.addAction('打开直播间')
             menu.addSeparator()  # 添加分割线，防止误操作
             delete = menu.addAction('删除')
             action = menu.exec_(self.mapToGlobal(QMouseEvent.pos()))
@@ -342,14 +342,14 @@ class CoverLabel(QLabel):
                     self.titleLabel.setBrush('#f1fefb')
                     # self.roomIDLabel.setBrush('#f1fefb')
                     if self.isPlaying:
-                        self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#7FFFD4;background-color:#5a636d}')
+                        self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:red;background-color:#5a636d}')
                     else:
                         self.setStyleSheet('border-width:0px')
                 else:
                     self.titleLabel.setBrush('#FFC125')
                     # self.roomIDLabel.setBrush('#FFC125')
                     if self.isPlaying:
-                        self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#7FFFD4;background-color:#5a636d}')
+                        self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:red;background-color:#5a636d}')
                     else:
                         self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#dfa616;background-color:#5a636d}')
                 self.topToken = not self.topToken
@@ -379,7 +379,10 @@ class CoverLabel(QLabel):
                         self.recordState = 0  # 取消录制
                         self.recordThread.checkTimer.stop()
                         self.refreshStateLabel()
-            else:
+            elif action == openBrowser:
+                if self.roomID != '0':
+                    QDesktopServices.openUrl(QUrl(r'https://live.bilibili.com/%s' % self.roomID))
+            elif action == addTo:
                 for index, i in enumerate(addWindow):
                     if action == i:
                         self.addToWindow.emit([index, self.roomID])  # 添加至窗口 窗口 房号
@@ -919,7 +922,7 @@ class LiverPanel(QWidget):
         for cover in self.coverList:
             if cover.roomID in playerList:
                 cover.isPlaying = True
-                cover.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#7FFFD4;background-color:#5a636d}')
+                cover.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:red;background-color:#5a636d}')
             else:
                 cover.isPlaying = False
                 if cover.topToken:
