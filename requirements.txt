@@ -1,0 +1,10 @@
+aiowebsocket==1.0.0.dev2
+certifi==2020.12.5
+chardet==4.0.0
+dnspython==2.1.0
+idna==2.10
+PyQt5==5.15.2
+PyQt5-sip==12.8.1
+python-vlc==3.0.11115
+requests==2.25.1
+urllib3==1.26.3
