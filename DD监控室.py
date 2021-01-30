@@ -65,9 +65,9 @@ class Version(QWidget):
         self.resize(350, 150)
         self.setWindowTitle('当前版本')
         layout = QGridLayout(self)
-        layout.addWidget(QLabel('DD监控室 v1.1'), 0, 0, 1, 2)
+        layout.addWidget(QLabel('DD监控室 v1.2'), 0, 0, 1, 2)
         layout.addWidget(QLabel('by 神君Channel'), 1, 0, 1, 2)
-        layout.addWidget(QLabel('特别鸣谢：大锅饭 美东矿业'), 2, 0, 1, 2)
+        layout.addWidget(QLabel('特别鸣谢：大锅饭 美东矿业 inkydragon'), 2, 0, 1, 2)
         releases_url = QLabel('')
         releases_url.setOpenExternalLinks(True)
         releases_url.setText(_translate("MainWindow", "<html><head/><body><p><a href=\"https://space.bilibili.com/637783\">\
@@ -90,7 +90,7 @@ class HotKey(QWidget):
         self.setWindowTitle('快捷键')
         layout = QGridLayout(self)
         layout.addWidget(QLabel('F、f —— 全屏'), 0, 0)
-        layout.addWidget(QLabel('H、h、空格 —— 隐藏控制条'), 1, 0)
+        layout.addWidget(QLabel('H、h —— 隐藏控制条'), 1, 0)
         layout.addWidget(QLabel('M、m、S、s —— 除当前鼠标悬停窗口外全部静音'), 2, 0)
 
 
@@ -789,7 +789,7 @@ class MainWindow(QMainWindow):
     def keyPressEvent(self, QKeyEvent):
         if QKeyEvent.key() == Qt.Key_Escape or QKeyEvent.key() == Qt.Key_F:
             self.fullScreen()  # 自动判断全屏状态并退出
-        elif QKeyEvent.key() == Qt.Key_H or QKeyEvent.key() == Qt.Key_Space:
+        elif QKeyEvent.key() == Qt.Key_H:
             self.openControlPanel()
         elif QKeyEvent.key() == Qt.Key_M or QKeyEvent.key() == Qt.Key_S:
             self.muteExcept()

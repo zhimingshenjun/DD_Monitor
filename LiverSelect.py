@@ -13,6 +13,17 @@ header = {
 }
 
 
+class CardLabel(QLabel):
+    def __init__(self, text='NA', fontColor='#f1fefb', size=11):
+        super(CardLabel, self).__init__()
+        self.setFont(QFont('微软雅黑', size, QFont.Bold))
+        self.setStyleSheet('color:%s;background-color:#00000000' % fontColor)
+        self.setText(text)
+
+    def setBrush(self, fontColor):
+        self.setStyleSheet('color:%s;background-color:#00000000' % fontColor)
+
+
 class OutlinedLabel(QLabel):
     def __init__(self, text='NA', fontColor='#FFFFFF', outColor='#222222', size=11):
         super().__init__()
@@ -189,21 +200,24 @@ class CoverLabel(QLabel):
         self.firstUpdateToken = True
         self.layout = QGridLayout(self)
         self.profile = CircleImage()
-        self.layout.addWidget(self.profile, 0, 4, 3, 2)
+        self.layout.addWidget(self.profile, 0, 4, 2, 2)
         if topToken:
             brush = '#FFC125'
-            self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#dfa616;background-color:#708090}')
+            self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#dfa616;background-color:#5a636d}')
         else:
-            brush = '#FFFFFF'
-            self.setStyleSheet('background-color:#708090')  # 灰色背景
+            brush = '#f1fefb'
+            self.setStyleSheet('background-color:#5a636d')  # 灰色背景
         self.titleLabel = OutlinedLabel(fontColor=brush)
+        # self.titleLabel = CardLabel(fontColor=brush)
         self.layout.addWidget(self.titleLabel, 0, 0, 1, 6)
-        self.roomIDLabel = OutlinedLabel(roomID, fontColor=brush)
-        self.layout.addWidget(self.roomIDLabel, 1, 0, 1, 6)
+        # self.roomIDLabel = OutlinedLabel(roomID, fontColor=brush)
+        # self.roomIDLabel = CardLabel(roomID, fontColor=brush)
+        # self.layout.addWidget(self.roomIDLabel, 1, 0, 1, 6)
         self.stateLabel = OutlinedLabel(size=13)
+        # self.stateLabel = CardLabel(size=13)
         self.stateLabel.setText('检测中')
         self.liveState = 0  # 0 未开播  1 直播中  2 投稿视频   -1 错误
-        self.layout.addWidget(self.stateLabel, 2, 0, 1, 6)
+        self.layout.addWidget(self.stateLabel, 1, 0, 1, 6)
         self.downloadFace = DownloadImage(60, 60)
         self.downloadFace.img.connect(self.updateProfile)
         self.downloadKeyFrame = DownloadImage(160, 90, True)
@@ -220,10 +234,10 @@ class CoverLabel(QLabel):
             self.roomTitle = ''
             self.setToolTip(self.roomTitle)
             if info[2]:
-                self.titleLabel.setText(info[2])
+                self.titleLabel.setText(info[2][:10])
                 self.stateLabel.setText('房间可能被封')
             else:
-                self.titleLabel.setText('错误的房号')
+                self.titleLabel.setText(info[1])
                 self.stateLabel.setText('无该房间')
             self.setStyleSheet('background-color:#8B3A3A')  # 红色背景
         else:
@@ -231,8 +245,8 @@ class CoverLabel(QLabel):
                 self.firstUpdateToken = False
                 self.downloadFace.setUrl(info[3])  # 启动下载头像线程
                 self.downloadFace.start()
-                self.roomIDLabel.setText(info[1])  # 房间号
-                self.titleLabel.setText(info[2])  # 名字
+                # self.roomIDLabel.setText(info[1])  # 房间号
+                self.titleLabel.setText(info[2][:10])  # 名字
                 self.title = info[2]
             if info[4] == 1:  # 直播中
                 self.liveState = 1
@@ -246,9 +260,9 @@ class CoverLabel(QLabel):
                 self.setToolTip(self.roomTitle)
                 self.clear()
                 if self.topToken:
-                    self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#dfa616;background-color:#708090}')
+                    self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#dfa616;background-color:#5a636d}')
                 else:
-                    self.setStyleSheet('background-color:#708090')  # 灰色背景
+                    self.setStyleSheet('background-color:#5a636d')  # 灰色背景
             self.refreshStateLabel()
 
     def refreshStateLabel(self, downloadTime=''):
@@ -323,13 +337,13 @@ class CoverLabel(QLabel):
                 self.hide()
             elif action == top:
                 if self.topToken:
-                    self.titleLabel.setBrush('#FFFFFF')
-                    self.roomIDLabel.setBrush('#FFFFFF')
+                    self.titleLabel.setBrush('#f1fefb')
+                    # self.roomIDLabel.setBrush('#f1fefb')
                     self.setStyleSheet('border-width:0px')
                 else:
                     self.titleLabel.setBrush('#FFC125')
-                    self.roomIDLabel.setBrush('#FFC125')
-                    self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#dfa616;background-color:#708090}')
+                    # self.roomIDLabel.setBrush('#FFC125')
+                    self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#dfa616;background-color:#5a636d}')
                 self.topToken = not self.topToken
                 self.changeTopToken.emit([self.roomID, self.topToken])  # 发送修改后的置顶token
             elif action == record:

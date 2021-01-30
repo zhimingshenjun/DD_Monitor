@@ -468,12 +468,16 @@ class VideoWidget(QFrame):
     def doubleClick(self):
         if not self.top:  # 非弹出类悬浮窗
             self.popWindow.emit([self.id, self.roomID, self.quality, True, self.startWithDanmu])
-            self.mediaPlay(1, True)  # 暂停播放
+            self.mediaStop()  # 直接停止播放原窗口
+            # self.mediaPlay(1, True)  # 暂停播放
 
     def leftMouseClicked(self):  # 设置drag事件 发送拖动封面的房间号
         drag = QDrag(self)
         mimeData = QMimeData()
-        mimeData.setText('exchange:%s:%s' % (self.id, self.roomID))
+        if self.top:  # 悬浮窗
+            mimeData.setText('roomID:%s' % self.roomID)
+        else:
+            mimeData.setText('exchange:%s:%s' % (self.id, self.roomID))
         drag.setMimeData(mimeData)
         drag.exec_()
         logging.debug(f'{self.name_str} drag exchange:%s:%s' % (self.id, self.roomID))
@@ -831,7 +835,7 @@ class VideoWidget(QFrame):
                 self.showNormal()
             else:
                 self.fullScreenKey.emit()  # 主界面退出全屏
-        elif QKeyEvent.key() == Qt.Key_H or QKeyEvent.key() == Qt.Key_Space:
+        elif QKeyEvent.key() == Qt.Key_H:
             self.hideBarKey.emit()
         elif QKeyEvent.key() == Qt.Key_F:
             self.fullScreenKey.emit()
