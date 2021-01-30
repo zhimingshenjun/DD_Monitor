@@ -1,0 +1,5 @@
+aiowebsocket==1.0.0.dev2
+dnspython==2.1.0
+PyInstaller==3.5
+PyQt5==5.15.2
+requests==2.23.0
