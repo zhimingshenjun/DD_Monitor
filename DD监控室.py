@@ -36,7 +36,7 @@ class ScrollArea(QScrollArea):
 
     def __init__(self):
         super(ScrollArea, self).__init__()
-        self.multiple = self.width() // 165
+        self.multiple = self.width() // 169
 
     def wheelEvent(self, QEvent):
         if QEvent.angleDelta().y() < 0:
@@ -47,8 +47,8 @@ class ScrollArea(QScrollArea):
             self.verticalScrollBar().setValue(value - 80)
 
     def resizeEvent(self, QResizeEvent):
-        multiple = self.width() // 165
-        if multiple != self.multiple:  # 按卡片长度的倍数调整
+        multiple = self.width() // 169
+        if multiple and multiple != self.multiple:  # 按卡片长度的倍数调整且不为0
             self.multiple = multiple
             self.multipleTimes.emit(multiple)
 
@@ -309,6 +309,7 @@ class MainWindow(QMainWindow):
         # self.scrollArea.setMinimumHeight(111)
         self.controlBarLayout.addWidget(self.scrollArea, 3, 0, 1, 5)
         self.liverPanel = LiverPanel(self.config['roomid'], application_path)
+        self.liverPanel.updatePlayingStatus(self.config['player'])
         self.liverPanel.addLiverRoomWidget.getHotLiver.start()
         self.liverPanel.addToWindow.connect(self.addCoverToPlayer)
         self.liverPanel.dumpConfig.connect(self.dumpConfig.start)  # 保存config
@@ -415,10 +416,12 @@ class MainWindow(QMainWindow):
     def addMedia(self, info):  # 窗口 房号
         id, roomID = info
         self.config['player'][id] = roomID
+        self.liverPanel.updatePlayingStatus(self.config['player'])
         self.dumpConfig.start()
 
     def deleteMedia(self, id):
         self.config['player'][id] = 0
+        self.liverPanel.updatePlayingStatus(self.config['player'])
         self.dumpConfig.start()
 
     def exchangeMedia(self, info):  # 交换播放窗口的函数

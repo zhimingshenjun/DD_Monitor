@@ -100,6 +100,7 @@ class TextBrowser(QWidget):
     def __init__(self, parent):
         super(TextBrowser, self).__init__(parent)
         self.optionWidget = TextOpation()
+        self.setWindowTitle('弹幕机')
 
         self.setWindowFlags(Qt.Window | Qt.FramelessWindowHint)
         self.setAttribute(Qt.WA_TranslucentBackground)

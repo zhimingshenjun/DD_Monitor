@@ -190,6 +190,7 @@ class CoverLabel(QLabel):
         self.setAcceptDrops(True)
         self.roomID = roomID
         self.topToken = topToken
+        self.isPlaying = False  # 正在播放
         self.title = 'NA'  # 这里其实一开始设计的时候写错名字了 实际这里是用户名不是房间号 将错就错下去了
         self.roomTitle = ''  # 这里才是真的存放房间名的地方
         self.recordState = 0  # 0 无录制任务  1 录制中  2 等待开播录制
@@ -339,11 +340,17 @@ class CoverLabel(QLabel):
                 if self.topToken:
                     self.titleLabel.setBrush('#f1fefb')
                     # self.roomIDLabel.setBrush('#f1fefb')
-                    self.setStyleSheet('border-width:0px')
+                    if self.isPlaying:
+                        self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#7FFFD4;background-color:#5a636d}')
+                    else:
+                        self.setStyleSheet('border-width:0px')
                 else:
                     self.titleLabel.setBrush('#FFC125')
                     # self.roomIDLabel.setBrush('#FFC125')
-                    self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#dfa616;background-color:#5a636d}')
+                    if self.isPlaying:
+                        self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#7FFFD4;background-color:#5a636d}')
+                    else:
+                        self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#dfa616;background-color:#5a636d}')
                 self.topToken = not self.topToken
                 self.changeTopToken.emit([self.roomID, self.topToken])  # 发送修改后的置顶token
             elif action == record:
@@ -473,7 +480,7 @@ class HotLiverTable(QTableWidget):
 
     def __init__(self):
         super().__init__()
-        
+
     def contextMenuEvent(self, event):
         self.menu = QMenu(self)
         addTo = self.menu.addMenu('添加至窗口 ►')
@@ -484,7 +491,7 @@ class HotLiverTable(QTableWidget):
         for index, i in enumerate(addWindow):
             if action == i:
                 text=self.item(self.currentRow(), 2).text()
-                self.addToWindow.emit([index, text]) 
+                self.addToWindow.emit([index, text])
                 break
 
 
@@ -807,7 +814,7 @@ class LiverPanel(QWidget):
         self.addLiverRoomWidget.hotLiverTable.addToWindow.connect(self.addCoverToPlayer)
         self.multiple = 1
         self.layout = QGridLayout(self)
-        self.layout.setSpacing(5)
+        self.layout.setSpacing(9)
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.coverList = []
         for roomID, topToken in roomIDDict.items():
@@ -888,7 +895,7 @@ class LiverPanel(QWidget):
             self.refreshPanel()  # 修改刷新策略 只有当有主播直播状态发生变化后才会刷新 降低闪退风险
         elif firstRefresh:
             self.refreshPanel()
-        elif not self.refreshCount % 6:  # 每20s x 6 = 2分钟强制刷新一次
+        elif not self.refreshCount % 3:  # 每20s x 3 = 1分钟强制刷新一次
             self.refreshPanel()
         # self.refreshPanel()
 
@@ -905,6 +912,18 @@ class LiverPanel(QWidget):
         self.roomIDDict[int(info[0])] = info[1]  # 房号 置顶token
         self.refreshPanel()
         self.dumpConfig.emit()  # 发送保存config信号
+
+    def updatePlayingStatus(self, playerList):
+        for cover in self.coverList:
+            if cover.roomID in playerList:
+                cover.isPlaying = True
+                cover.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#7FFFD4;background-color:#5a636d}')
+            else:
+                cover.isPlaying = False
+                if cover.topToken:
+                    cover.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#dfa616;background-color:#5a636d}')
+                else:
+                    cover.setStyleSheet('#cover{border-width:0px;background-color:#5a636d}')
 
     def refreshPanel(self):
         tmpList = []
