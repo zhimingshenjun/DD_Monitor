@@ -829,7 +829,7 @@ class VideoWidget(QFrame):
                 self.showNormal()
             else:
                 self.fullScreenKey.emit()  # 主界面退出全屏
-        elif QKeyEvent.key() == Qt.Key_H:
+        elif QKeyEvent.key() == Qt.Key_H or QKeyEvent.key() == Qt.Key_Space:
             self.hideBarKey.emit()
         elif QKeyEvent.key() == Qt.Key_F:
             self.fullScreenKey.emit()

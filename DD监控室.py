@@ -36,7 +36,7 @@ class ScrollArea(QScrollArea):
 
     def __init__(self):
         super(ScrollArea, self).__init__()
-        self.multiple = self.width() // 160
+        self.multiple = self.width() // 165
 
     def wheelEvent(self, QEvent):
         if QEvent.angleDelta().y() < 0:
@@ -47,16 +47,16 @@ class ScrollArea(QScrollArea):
             self.verticalScrollBar().setValue(value - 80)
 
     def resizeEvent(self, QResizeEvent):
-        multiple = self.width() // 160
-        if multiple != self.multiple:
+        multiple = self.width() // 165
+        if multiple != self.multiple:  # 按卡片长度的倍数调整
             self.multiple = multiple
             self.multipleTimes.emit(multiple)
 
 
-class DockWidget(QDockWidget):
-    def __init__(self, title, parent):
-        super(DockWidget, self).__init__(parent)
-        self.setWindowTitle(title)
+# class DockWidget(QDockWidget):
+#     def __init__(self, title):
+#         super(DockWidget, self).__init__()
+#         self.setWindowTitle(title)
 
 
 class Version(QWidget):
@@ -90,7 +90,7 @@ class HotKey(QWidget):
         self.setWindowTitle('快捷键')
         layout = QGridLayout(self)
         layout.addWidget(QLabel('F、f —— 全屏'), 0, 0)
-        layout.addWidget(QLabel('H、h —— 隐藏控制条'), 1, 0)
+        layout.addWidget(QLabel('H、h、空格 —— 隐藏控制条'), 1, 0)
         layout.addWidget(QLabel('M、m、S、s —— 除当前鼠标悬停窗口外全部静音'), 2, 0)
 
 
@@ -137,6 +137,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle('DD监控室')
         self.resize(1600, 900)
         self.maximumToken = True
+        self.soloToken = False  # 记录静音除鼠标悬停窗口以外的其他所有窗口的标志位 True就是恢复所有房间声音
         self.cacheFolder = cacheFolder
         self.configJSONPath = os.path.join(application_path, r'utils/config.json')
         self.config = {}
@@ -261,13 +262,14 @@ class MainWindow(QMainWindow):
             logging.info("VLC设置完毕 %s / 9" % str(i + 1))
         self.setPlayer()
 
-        self.controlDock = DockWidget('控制条', self)
+        self.controlDock = QDockWidget('控制条')
+        self.controlDock.setFloating(False)
         self.controlDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
-        self.controlDock.setFloating(True)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.controlDock)
         controlWidget = QWidget()
         self.controlDock.setWidget(controlWidget)
         self.controlBarLayout = QGridLayout(controlWidget)
-        self.controlDock.show() if self.config['control'] else self.controlDock.hide()
+        # self.controlDock.show() if self.config['control'] else self.controlDock.hide()
 
         self.globalPlayToken = True
         self.play = PushButton(self.style().standardIcon(QStyle.SP_MediaPause))
@@ -294,7 +296,7 @@ class MainWindow(QMainWindow):
         progressText.setText('设置播放器控制...')
 
         self.addButton = QPushButton('+')
-        self.addButton.setFixedSize(160, 104)
+        self.addButton.setFixedSize(160, 90)
         self.addButton.setStyleSheet('border:3px dotted #EEEEEE')
         self.addButton.setFont(QFont('Arial', 24, QFont.Bold))
         progressText.setText('设置添加控制...')
@@ -304,8 +306,8 @@ class MainWindow(QMainWindow):
 
         self.scrollArea = ScrollArea()
         self.scrollArea.setStyleSheet('border-width:0px')
-        self.scrollArea.setMinimumHeight(111)
-        self.controlBarLayout.addWidget(self.scrollArea, 3, 0, 1, 10)
+        # self.scrollArea.setMinimumHeight(111)
+        self.controlBarLayout.addWidget(self.scrollArea, 3, 0, 1, 5)
         self.liverPanel = LiverPanel(self.config['roomid'], application_path)
         self.liverPanel.addLiverRoomWidget.getHotLiver.start()
         self.liverPanel.addToWindow.connect(self.addCoverToPlayer)
@@ -557,9 +559,8 @@ class MainWindow(QMainWindow):
         self.config['hardwareDecode'] = hardwareDecodeToken
 
     def openControlPanel(self):
-        self.controlDock.hide() if self.controlBarLayoutToken else self.controlDock.show()
-        self.controlBarLayoutToken = not self.controlBarLayoutToken
-        self.config['control'] = self.controlBarLayoutToken
+        self.controlDock.show() if self.controlDock.isHidden() else self.controlDock.hide()
+        # self.config['control'] = not self.controlDock.isHidden()  # 不用记录这个标志位了 每次启动强制显示控制条
         # self.dumpConfig.start()
 
     def openVersion(self):
@@ -762,18 +763,22 @@ class MainWindow(QMainWindow):
                     QMessageBox.information(self, '导入预设', '导入完成', QMessageBox.Ok)
 
     def muteExcept(self):
-        for videoWidget in self.videoWidgetList:
-            if videoWidget.hoverToken:
-                videoWidget.mediaMute(1)  # 取消静音
-            else:
-                videoWidget.mediaMute(2)  # 静音
+        if not self.soloToken:
+            for videoWidget in self.videoWidgetList:
+                if not videoWidget.isHidden() and videoWidget.hoverToken:
+                    videoWidget.mediaMute(1)  # 取消静音
+                else:
+                    videoWidget.mediaMute(2)  # 静音
+        else:  # 恢复所有直播间声音
+            for videoWidget in self.videoWidgetList:
+                if not videoWidget.isHidden():
+                    videoWidget.mediaMute(1)  # 取消静音
+        self.soloToken = not self.soloToken
 
     def keyPressEvent(self, QKeyEvent):
-        if QKeyEvent.key() == Qt.Key_Escape:
+        if QKeyEvent.key() == Qt.Key_Escape or QKeyEvent.key() == Qt.Key_F:
             self.fullScreen()  # 自动判断全屏状态并退出
-        elif QKeyEvent.key() == Qt.Key_F:
-            self.fullScreen()
-        elif QKeyEvent.key() == Qt.Key_H:
+        elif QKeyEvent.key() == Qt.Key_H or QKeyEvent.key() == Qt.Key_Space:
             self.openControlPanel()
         elif QKeyEvent.key() == Qt.Key_M or QKeyEvent.key() == Qt.Key_S:
             self.muteExcept()

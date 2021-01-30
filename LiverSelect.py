@@ -12,6 +12,7 @@ header = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'
 }
 
+
 class OutlinedLabel(QLabel):
     def __init__(self, text='NA', fontColor='#FFFFFF', outColor='#222222', size=11):
         super().__init__()
@@ -20,45 +21,33 @@ class OutlinedLabel(QLabel):
         self.setText(text)
         self.setBrush(fontColor)
         self.setPen(outColor)
+        self.w = self.font().pointSize() / 15
+        self.metrics = QFontMetrics(self.font())
 
     def setBrush(self, brush):
+        brush = QColor(brush)
         if not isinstance(brush, QBrush):
-            brush = QBrush(QColor(brush))
+            brush = QBrush(brush)
         self.brush = brush
 
     def setPen(self, pen):
+        pen = QColor(pen)
         if not isinstance(pen, QPen):
-            pen = QPen(QColor(pen))
+            pen = QPen(pen)
         pen.setJoinStyle(Qt.RoundJoin)
         self.pen = pen
 
     def paintEvent(self, event):
-        w = self.font().pointSize() / 15
         rect = self.rect()
-        metrics = QFontMetrics(self.font())
-        tr = metrics.boundingRect(self.text()).adjusted(0, 0, w, w)
         indent = self.indent()
-        if self.alignment() & Qt.AlignLeft:
-            x = rect.left() + indent - min(metrics.leftBearing(self.text()[0]), 0)
-        elif self.alignment() & Qt.AlignRight:
-            x = rect.x() + rect.width() - indent - tr.width()
-        else:
-            x = (rect.width() - tr.width()) / 2
-
-        if self.alignment() & Qt.AlignTop:
-            y = rect.top() + indent + metrics.ascent()
-        elif self.alignment() & Qt.AlignBottom:
-            y = rect.y() + rect.height() - indent - metrics.descent()
-        else:
-            y = (rect.height() + metrics.ascent() - metrics.descent()) / 2
+        x = rect.left() + indent - min(self.metrics.leftBearing(self.text()[0]), 0)
+        y = (rect.height() + self.metrics.ascent() - self.metrics.descent()) / 2
         path = QPainterPath()
         path.addText(x, y, self.font(), self.text())
         qp = QPainter(self)
         qp.setRenderHint(QPainter.Antialiasing)
-        self.pen.setWidthF(w * 2)
+        self.pen.setWidthF(self.w * 2)
         qp.strokePath(path, self.pen)
-        if 1 < self.brush.style() < 15:
-            qp.fillPath(path, self.palette().window())
         qp.fillPath(path, self.brush)
 
 
@@ -209,7 +198,7 @@ class CoverLabel(QLabel):
             self.setStyleSheet('background-color:#708090')  # 灰色背景
         self.titleLabel = OutlinedLabel(fontColor=brush)
         self.layout.addWidget(self.titleLabel, 0, 0, 1, 6)
-        self.roomIDLabel = OutlinedLabel(str(roomID), fontColor=brush)
+        self.roomIDLabel = OutlinedLabel(roomID, fontColor=brush)
         self.layout.addWidget(self.roomIDLabel, 1, 0, 1, 6)
         self.stateLabel = OutlinedLabel(size=13)
         self.stateLabel.setText('检测中')
@@ -265,18 +254,18 @@ class CoverLabel(QLabel):
     def refreshStateLabel(self, downloadTime=''):
         if self.liveState == 1:
             if self.recordState == 1:  # 录制中
-                self.stateLabel.setBrush(QColor('#87CEFA'))  # 录制中为蓝色字体
+                self.stateLabel.setBrush('#87CEFA')  # 录制中为蓝色字体
                 if downloadTime:
                     self.stateLabel.setText('· 录制中 %s' % downloadTime)
             else:
-                self.stateLabel.setBrush(QColor('#7FFFD4'))  # 直播中为绿色字体
+                self.stateLabel.setBrush('#7FFFD4')  # 直播中为绿色字体
                 self.stateLabel.setText('· 直播中')
         else:
             if self.recordState == 2:  # 等待录制
-                self.stateLabel.setBrush(QColor('#FFA500'))  # 待录制为橙色字体
+                self.stateLabel.setBrush('#FFA500')  # 待录制为橙色字体
                 self.stateLabel.setText('· 等待开播')
             else:
-                self.stateLabel.setBrush(QColor('#FF6A6A'))  # 未开播为红色字体
+                self.stateLabel.setBrush('#FF6A6A')  # 未开播为红色字体
                 self.stateLabel.setText('· 未开播')
 
     def recordError(self, roomID):
@@ -295,7 +284,7 @@ class CoverLabel(QLabel):
         img.save(buffer, "PNG", quality=100)
         image = bytes(buffer.data().toBase64()).decode()
         html = '<img src="data:image/png;base64,{}">'.format(image)
-        self.setToolTip('<b>%s</b><br>%s<br/>' % (self.roomTitle.strip(), html))
+        self.setToolTip('<div style="text-align:center">%s</div><br>%s<br/>' % (self.roomTitle.strip(), html))
 
     def dragEnterEvent(self, QDragEnterEvent):
         QDragEnterEvent.acceptProposedAction()
@@ -904,7 +893,6 @@ class LiverPanel(QWidget):
         self.dumpConfig.emit()  # 发送保存config信号
 
     def refreshPanel(self):
-        print(1)
         tmpList = []
         for topToken in [True, False]:
             for liveState in [1, 0, -1]:  # 按顺序添加正在直播的 没在直播的 还有错误的卡片
