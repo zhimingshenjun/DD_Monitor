@@ -31,6 +31,13 @@ application_path = ""
 def _translate(context, text, disambig):
     return QApplication.translate(context, text, disambig)
 
+class ControlWidget(QWidget):
+    def __init__(self):
+        super(ControlWidget, self).__init__()
+
+    def sizeHint(self):
+        return QSize(100, 100)
+
 
 class ScrollArea(QScrollArea):
     multipleTimes = pyqtSignal(int)
@@ -39,6 +46,9 @@ class ScrollArea(QScrollArea):
         super(ScrollArea, self).__init__()
         self.multiple = self.width() // 169
         self.horizontalScrollBar().setVisible(False)
+
+    def sizeHint(self):
+        return QSize(100, 100)
 
     def wheelEvent(self, QEvent):
         if QEvent.angleDelta().y() < 0:
@@ -198,15 +208,8 @@ class MainWindow(QMainWindow):
                     danmuConfig.append(10)
         else:  # 默认和备份 json 配置均读取失败
             self.config = {
-                'roomid': {'21396545': False, '21402309': False, '22384516': False, '8792912': False,
-                           '21696950': False, '14327465': False, '704808': True, '1321846': False,
-                           '56237': False, '8725120': False, '22347054': False, '14052636': False,
-                           '21320551': False, '876396': False, '21448649': False, '24393': False,
-                           '12845193': False, '41682': False, '21652717': False, '22571958': False,
-                           '21919321': True, '21013446': False},  # 置顶显示
+                'roomid': {'21396545': False, '21402309': False, '22384516': False, '8792912': False},  # 置顶显示
                 'layout': [(0, 0, 1, 1), (0, 1, 1, 1), (1, 0, 1, 1), (1, 1, 1, 1)],
-                # 'player': ['21396545', '21402309', '22384516', '8792912',
-                #            '21696950', '14327465', '704808', '1321846', '318'],
                 'player': ['0'] * 9,
                 'quality': [80] * 9,
                 'audioChannel': [0] * 9,
@@ -275,39 +278,18 @@ class MainWindow(QMainWindow):
         # 设置所有播放器布局
         self.setPlayer()
 
-        # 可滑动卡片槽
-        self.scrollArea = ScrollArea()
-        self.scrollArea.setStyleSheet('border-width:0px')
-        # self.scrollArea.setMinimumHeight(111)
-        self.cardDock = QDockWidget('卡片槽')
-        self.cardDock.setWidget(self.scrollArea)
-        self.cardDock.setFloating(False)
-        self.cardDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.cardDock)
-
-        # ---- 全局控制按钮中心 ----
         self.controlDock = QDockWidget('控制条')
-        self.controlDock.setFixedHeight(200)
+        self.controlDock.setFixedWidth(178)
         self.controlDock.setFloating(False)
-        self.controlDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.controlDock)
-
-        # 控制条布局
-        controlWidget = QWidget()
+        self.controlDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea | Qt.TopDockWidgetArea)
+        self.addDockWidget(Qt.TopDockWidgetArea, self.controlDock)
+        controlWidget = ControlWidget()
         self.controlDock.setWidget(controlWidget)
         self.controlBarLayout = QGridLayout(controlWidget)
         # self.controlDock.show() if self.config['control'] else self.controlDock.hide()
-
-        # 全局暂停/播放
-        self.globalPlayToken = True
-        self.play = PushButton(self.style().standardIcon(QStyle.SP_MediaPause))
-        self.play.clicked.connect(self.globalMediaPlay)
-        self.controlBarLayout.addWidget(self.play, 0, 0, 1, 1)
-        # 全局刷新
         self.reload = PushButton(self.style().standardIcon(QStyle.SP_BrowserReload))
         self.reload.clicked.connect(self.globalMediaReload)
         self.controlBarLayout.addWidget(self.reload, 0, 1, 1, 1)
-        # 关闭所有播放器
         self.stop = PushButton(self.style().standardIcon(QStyle.SP_DialogCancelButton))
         self.stop.clicked.connect(self.globalMediaStop)
         self.controlBarLayout.addWidget(self.stop, 0, 2, 1, 1)
@@ -348,6 +330,16 @@ class MainWindow(QMainWindow):
         progressText.setText('设置添加控制...')
         self.controlBarLayout.addWidget(self.addButton, 2, 0, 1, 4)
         progressText.setText('设置全局控制...')
+
+        self.scrollArea = ScrollArea()
+        self.scrollArea.setStyleSheet('border-width:0px')
+        # self.scrollArea.setMinimumHeight(111)
+        self.cardDock = QDockWidget('卡片槽')
+        self.cardDock.setWidget(self.scrollArea)
+        self.cardDock.setFloating(False)
+        self.cardDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea | Qt.TopDockWidgetArea)
+        self.addDockWidget(Qt.TopDockWidgetArea, self.cardDock)
+
         # self.controlBarLayout.addWidget(self.scrollArea, 3, 0, 1, 5)
 
         # 主播添加窗口
@@ -681,17 +673,15 @@ class MainWindow(QMainWindow):
         if self.controlDock.isHidden() and self.cardDock.isHidden():
             self.controlDock.show()
             self.cardDock.show()
-            if not self.isFullScreen():
-                self.optionMenu.menuAction().setVisible(True)
-                self.versionMenu.menuAction().setVisible(True)
-                self.payMenu.menuAction().setVisible(True)
+            self.optionMenu.menuAction().setVisible(True)
+            self.versionMenu.menuAction().setVisible(True)
+            self.payMenu.menuAction().setVisible(True)
         else:
             self.controlDock.hide()
             self.cardDock.hide()
-            if not self.isFullScreen():
-                self.optionMenu.menuAction().setVisible(False)
-                self.versionMenu.menuAction().setVisible(False)
-                self.payMenu.menuAction().setVisible(False)
+            self.optionMenu.menuAction().setVisible(False)
+            self.versionMenu.menuAction().setVisible(False)
+            self.payMenu.menuAction().setVisible(False)
         self.controlBarLayoutToken = self.controlDock.isHidden()
 
     def openVersion(self):
@@ -841,6 +831,7 @@ class MainWindow(QMainWindow):
             self.payMenu.menuAction().setVisible(True)
             if self.controlBarLayoutToken:
                 self.controlDock.show()
+                self.cardDock.show()
         else:  # 全屏
             for videoWidget in self.videoWidgetList:
                 videoWidget.fullScreen = True
@@ -850,6 +841,7 @@ class MainWindow(QMainWindow):
             self.payMenu.menuAction().setVisible(False)
             if self.controlBarLayoutToken:
                 self.controlDock.hide()
+                self.cardDock.hide()
             for videoWidget in self.videoWidgetList:
                 videoWidget.fullScreen = True
             self.showFullScreen()
@@ -858,7 +850,7 @@ class MainWindow(QMainWindow):
         self.savePath = QFileDialog.getSaveFileName(self, "选择保存路径", 'DD监控室预设', "*.json")[0]
         if self.savePath:  # 保存路径有效
             try:
-                with open(self.savePath, 'w') as f:
+                with codecs.open(self.savePath, 'w', encoding='utf-8') as f:
                     f.write(json.dumps(self.config, ensure_ascii=False))
                 QMessageBox.information(self, '导出预设', '导出完成', QMessageBox.Ok)
             except:
@@ -872,11 +864,18 @@ class MainWindow(QMainWindow):
                 try:
                     with codecs.open(jsonPath, 'r', encoding='utf-8') as f:
                         config = json.loads(f.read())
+                except UnicodeDecodeError:
+                    try:
+                        with codecs.open(jsonPath, 'r', encoding='gbk') as f:
+                            config = json.loads(f.read())
+                    except:
+                        logging.exception('json 配置导入失败')
+                        config = {}
                 except:
                     logging.exception('json 配置导入失败')
                     config = {}
                 if config:  # 如果能成功读取到config文件
-                    config['roomid'].update(self.config['roomid'])  # 添加现有直播间
+                    # config['roomid'].update(self.config['roomid'])  # 添加现有直播间
                     self.config = config
                     while len(self.config['player']) < 9:
                         self.config['player'].append(0)

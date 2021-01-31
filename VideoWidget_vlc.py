@@ -766,13 +766,11 @@ class VideoWidget(QFrame):
                 self.danmu.start()
                 self.textSetting[0] = True
                 self.startWithDanmu = True
-            # self.translator.show()
         else:
             self.textBrowser.hide()
-            # self.translator.hide()
+            self.startWithDanmu = False
         self.textSetting[0] = not self.textBrowser.isHidden()
         self.setDanmu.emit()
-        # self.setTranslator.emit([self.id, not self.translator.isHidden()])
 
     def mediaPlay(self, force=0, stopDownload=False):
         if force == 1:
