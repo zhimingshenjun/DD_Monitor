@@ -263,6 +263,7 @@ class MainWindow(QMainWindow):
         self.setPlayer()
 
         self.controlDock = QDockWidget('控制条')
+        self.controlDock.setFixedHeight(200)
         self.controlDock.setFloating(False)
         self.controlDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.controlDock)
@@ -307,9 +308,14 @@ class MainWindow(QMainWindow):
         self.scrollArea = ScrollArea()
         self.scrollArea.setStyleSheet('border-width:0px')
         # self.scrollArea.setMinimumHeight(111)
-        self.controlBarLayout.addWidget(self.scrollArea, 3, 0, 1, 5)
+        self.cardDock = QDockWidget('卡片槽')
+        self.cardDock.setWidget(self.scrollArea)
+        self.cardDock.setFloating(False)
+        self.cardDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.cardDock)
+
+        # self.controlBarLayout.addWidget(self.scrollArea, 3, 0, 1, 5)
         self.liverPanel = LiverPanel(self.config['roomid'], application_path)
-        self.liverPanel.updatePlayingStatus(self.config['player'])
         self.liverPanel.addLiverRoomWidget.getHotLiver.start()
         self.liverPanel.addToWindow.connect(self.addCoverToPlayer)
         self.liverPanel.dumpConfig.connect(self.dumpConfig.start)  # 保存config
@@ -317,6 +323,7 @@ class MainWindow(QMainWindow):
         self.scrollArea.setWidget(self.liverPanel)
         self.scrollArea.multipleTimes.connect(self.changeLiverPanelLayout)
         self.addButton.clicked.connect(self.liverPanel.openLiverRoomPanel)
+        self.liverPanel.updatePlayingStatus(self.config['player'])
         progressText.setText('设置主播选择控制...')
 
         self.optionMenu = self.menuBar().addMenu('设置')
@@ -573,14 +580,16 @@ class MainWindow(QMainWindow):
         self.config['hardwareDecode'] = hardwareDecodeToken
 
     def openControlPanel(self):
-        if self.controlDock.isHidden():
+        if self.controlDock.isHidden() and self.cardDock.isHidden():
             self.controlDock.show()
+            self.cardDock.show()
             if not self.isFullScreen():
                 self.optionMenu.menuAction().setVisible(True)
                 self.versionMenu.menuAction().setVisible(True)
                 self.payMenu.menuAction().setVisible(True)
         else:
             self.controlDock.hide()
+            self.cardDock.hide()
             if not self.isFullScreen():
                 self.optionMenu.menuAction().setVisible(False)
                 self.versionMenu.menuAction().setVisible(False)
@@ -635,8 +644,8 @@ class MainWindow(QMainWindow):
         self.pay.thankToBoss.start()
 
     def checkMousePos(self):
-        for videoWidget in self.videoWidgetList:  # vlc的播放会直接音量最大化 实在没地方放了 写在这里实时强制修改它的音量
-            videoWidget.player.audio_set_volume(int(videoWidget.volume * videoWidget.volumeAmplify))
+        # for videoWidget in self.videoWidgetList:  # vlc的播放会直接音量最大化 实在没地方放了 写在这里实时强制修改它的音量
+        #     videoWidget.player.audio_set_volume(int(videoWidget.volume * videoWidget.volumeAmplify))
         newMousePos = QCursor.pos()
         if newMousePos != self.oldMousePos:
             self.setCursor(Qt.ArrowCursor)  # 鼠标动起来就显示

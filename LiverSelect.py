@@ -260,7 +260,9 @@ class CoverLabel(QLabel):
                 self.roomTitle = ''  # 房间直播标题
                 self.setToolTip(self.roomTitle)
                 self.clear()
-                if self.topToken:
+                if self.isPlaying:
+                    self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:red;background-color:#5a636d}')
+                elif self.topToken:
                     self.setStyleSheet('#cover{border-width:3px;border-style:solid;border-color:#dfa616;background-color:#5a636d}')
                 else:
                     self.setStyleSheet('background-color:#5a636d')  # 灰色背景
@@ -820,7 +822,7 @@ class LiverPanel(QWidget):
         self.multiple = 1
         self.layout = QGridLayout(self)
         self.layout.setSpacing(9)
-        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setContentsMargins(7, 7, 7, 7)
         self.coverList = []
         for roomID, topToken in roomIDDict.items():
             self.coverList.append(CoverLabel(roomID, topToken))
