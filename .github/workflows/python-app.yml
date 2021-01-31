@@ -19,6 +19,11 @@ jobs:
       run: pip install -r requirements.txt
     - name: Build
       run: "scripts/build_linux.sh"
+    - name: Archive Build
+      uses: actions/upload-artifact@v2
+      with:
+        name: linux-build
+        path: dist/DDMonitor
   
   build-windows:
 
@@ -47,6 +52,11 @@ jobs:
       run: pip install -r requirements.txt
     - name: Build
       run: "scripts/build_win.bat"
+    - name: Archive Build
+      uses: actions/upload-artifact@v2
+      with:
+        name: windows-build
+        path: dist/DDMonitor
     
   build-macos:
 
@@ -64,4 +74,9 @@ jobs:
       run: pip install -r requirements.txt
     - name: Build
       run: "scripts/build_macos.sh"
+    - name: Archive Build
+      uses: actions/upload-artifact@v2
+      with:
+        name: macos-build
+        path: dist/DDMonitor
   
