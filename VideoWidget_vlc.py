@@ -780,9 +780,10 @@ class VideoWidget(QFrame):
         self.getMediaURL.recordToken = False  # 设置停止缓存标志位
         self.getMediaURL.checkTimer.stop()
         self.checkPlaying.stop()
-        self.player.pause()
+        self.player.stop()
         if self.roomID != '0':
             self.setTitle()  # 同时获取最新直播状态
+            self.playerRestart()
             if self.liveStatus == 1:  # 直播中
                 self.getMediaURL.setConfig(self.roomID, self.quality)  # 设置房号和画质
                 self.getMediaURL.start()  # 开始缓存视频
@@ -846,6 +847,14 @@ class VideoWidget(QFrame):
             self.player.set_nsobject(int(self.videoFrame.winId()))
         else:
             self.player.set_xwindow(self.videoFrame.winId())
+
+    def playerRestart(self):
+        """用于 player.stop() 后重新实例化 player
+        vlc 实例（self.instance）保持不动
+        """
+        # 重新实例化 player
+        self.newPlayer()
+        # 后续视频流设置由 GetMediaURL 发送 cacheName 信号执行 self.setMedia 完成
 
     def setTitle(self):
         if self.roomID == '0':
