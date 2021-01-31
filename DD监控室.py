@@ -31,6 +31,13 @@ application_path = ""
 def _translate(context, text, disambig):
     return QApplication.translate(context, text, disambig)
 
+class ControlWidget(QWidget):
+    def __init__(self):
+        super(ControlWidget, self).__init__()
+
+    def sizeHint(self):
+        return QSize(100, 100)
+
 
 class ScrollArea(QScrollArea):
     multipleTimes = pyqtSignal(int)
@@ -39,6 +46,9 @@ class ScrollArea(QScrollArea):
         super(ScrollArea, self).__init__()
         self.multiple = self.width() // 169
         self.horizontalScrollBar().setVisible(False)
+
+    def sizeHint(self):
+        return QSize(100, 100)
 
     def wheelEvent(self, QEvent):
         if QEvent.angleDelta().y() < 0:
@@ -265,21 +275,12 @@ class MainWindow(QMainWindow):
             logging.info("VLC设置完毕 %s / 9" % str(i + 1))
         self.setPlayer()
 
-        self.scrollArea = ScrollArea()
-        self.scrollArea.setStyleSheet('border-width:0px')
-        # self.scrollArea.setMinimumHeight(111)
-        self.cardDock = QDockWidget('卡片槽')
-        self.cardDock.setWidget(self.scrollArea)
-        self.cardDock.setFloating(False)
-        self.cardDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.cardDock)
-
         self.controlDock = QDockWidget('控制条')
-        self.controlDock.setFixedHeight(200)
+        self.controlDock.setFixedWidth(178)
         self.controlDock.setFloating(False)
-        self.controlDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.controlDock)
-        controlWidget = QWidget()
+        self.controlDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea | Qt.TopDockWidgetArea)
+        self.addDockWidget(Qt.TopDockWidgetArea, self.controlDock)
+        controlWidget = ControlWidget()
         self.controlDock.setWidget(controlWidget)
         self.controlBarLayout = QGridLayout(controlWidget)
         # self.controlDock.show() if self.config['control'] else self.controlDock.hide()
@@ -327,6 +328,15 @@ class MainWindow(QMainWindow):
 
         self.controlBarLayout.addWidget(self.addButton, 2, 0, 1, 4)
         progressText.setText('设置全局控制...')
+
+        self.scrollArea = ScrollArea()
+        self.scrollArea.setStyleSheet('border-width:0px')
+        # self.scrollArea.setMinimumHeight(111)
+        self.cardDock = QDockWidget('卡片槽')
+        self.cardDock.setWidget(self.scrollArea)
+        self.cardDock.setFloating(False)
+        self.cardDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea | Qt.TopDockWidgetArea)
+        self.addDockWidget(Qt.TopDockWidgetArea, self.cardDock)
 
         # self.controlBarLayout.addWidget(self.scrollArea, 3, 0, 1, 5)
         self.liverPanel = LiverPanel(self.config['roomid'], application_path)
@@ -657,17 +667,15 @@ class MainWindow(QMainWindow):
         if self.controlDock.isHidden() and self.cardDock.isHidden():
             self.controlDock.show()
             self.cardDock.show()
-            if not self.isFullScreen():
-                self.optionMenu.menuAction().setVisible(True)
-                self.versionMenu.menuAction().setVisible(True)
-                self.payMenu.menuAction().setVisible(True)
+            self.optionMenu.menuAction().setVisible(True)
+            self.versionMenu.menuAction().setVisible(True)
+            self.payMenu.menuAction().setVisible(True)
         else:
             self.controlDock.hide()
             self.cardDock.hide()
-            if not self.isFullScreen():
-                self.optionMenu.menuAction().setVisible(False)
-                self.versionMenu.menuAction().setVisible(False)
-                self.payMenu.menuAction().setVisible(False)
+            self.optionMenu.menuAction().setVisible(False)
+            self.versionMenu.menuAction().setVisible(False)
+            self.payMenu.menuAction().setVisible(False)
         self.controlBarLayoutToken = self.controlDock.isHidden()
 
     def openVersion(self):
@@ -812,6 +820,7 @@ class MainWindow(QMainWindow):
             self.payMenu.menuAction().setVisible(True)
             if self.controlBarLayoutToken:
                 self.controlDock.show()
+                self.cardDock.show()
         else:  # 全屏
             for videoWidget in self.videoWidgetList:
                 videoWidget.fullScreen = True
@@ -821,6 +830,7 @@ class MainWindow(QMainWindow):
             self.payMenu.menuAction().setVisible(False)
             if self.controlBarLayoutToken:
                 self.controlDock.hide()
+                self.cardDock.hide()
             for videoWidget in self.videoWidgetList:
                 videoWidget.fullScreen = True
             self.showFullScreen()
@@ -847,7 +857,7 @@ class MainWindow(QMainWindow):
                     logging.exception('json 配置导入失败')
                     config = {}
                 if config:  # 如果能成功读取到config文件
-                    config['roomid'].update(self.config['roomid'])  # 添加现有直播间
+                    # config['roomid'].update(self.config['roomid'])  # 添加现有直播间
                     self.config = config
                     while len(self.config['player']) < 9:
                         self.config['player'].append(0)
