@@ -151,9 +151,12 @@ class MainWindow(QMainWindow):
         self.maximumToken = True
         self.soloToken = False  # 记录静音除鼠标悬停窗口以外的其他所有窗口的标志位 True就是恢复所有房间声音
         self.cacheFolder = cacheFolder
+
+        # ---- json 配置文件加载 ----
         self.configJSONPath = os.path.join(application_path, r'utils/config.json')
         self.config = {}
-        if os.path.exists(self.configJSONPath):  # 读取config
+        # 读取默认的 config
+        if os.path.exists(self.configJSONPath):
             if os.path.getsize(self.configJSONPath):
                 try:
                     with codecs.open(self.configJSONPath, 'r', encoding='utf-8') as f:
@@ -162,7 +165,8 @@ class MainWindow(QMainWindow):
                 except:
                     logging.exception('json 配置读取失败')
                     self.config = {}
-        if not self.config:  # 读取config失败 尝试读取备份
+        # 读取config失败 尝试读取备份
+        if not self.config:  
             for backupNumber in [1, 2, 3]:  # 备份预设123
                 self.configJSONPath = os.path.join(application_path, r'utils/config_备份%d.json' % backupNumber)
                 if os.path.exists(self.configJSONPath):  # 如果备份文件存在
@@ -173,7 +177,8 @@ class MainWindow(QMainWindow):
                         except:
                             logging.exception('json 备份配置读取失败')
                             self.config = {}
-        if self.config:  # 如果能成功读取到config文件
+        # 如果能成功读取到config文件
+        if self.config:  
             while len(self.config['player']) < 9:
                 self.config['player'].append(0)
             if type(self.config['roomid']) == list:
@@ -201,7 +206,7 @@ class MainWindow(QMainWindow):
             for danmuConfig in self.config['danmu']:
                 if len(danmuConfig) == 6:
                     danmuConfig.append(10)
-        else:
+        else:  # 默认和备份 json 配置均读取失败
             self.config = {
                 'roomid': {'21396545': False, '21402309': False, '22384516': False, '8792912': False},  # 置顶显示
                 'layout': [(0, 0, 1, 1), (0, 1, 1, 1), (1, 0, 1, 1), (1, 1, 1, 1)],
@@ -218,8 +223,11 @@ class MainWindow(QMainWindow):
                 'startWithDanmu': True
             }
         self.dumpConfig = DumpConfig(self.config)
+
+        # ---- 主窗体控件 ----
         mainWidget = QWidget()
         self.setCentralWidget(mainWidget)
+        # Grid 布局
         self.mainLayout = QGridLayout(mainWidget)
         self.mainLayout.setSpacing(0)
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
@@ -229,6 +237,7 @@ class MainWindow(QMainWindow):
         self.hotKey = HotKey()
         self.pay = pay()
 
+        # ---- 内嵌/弹出播放器初始化 ----
         self.videoWidgetList = []
         self.popVideoWidgetList = []
         vlcProgressCounter = 1
@@ -266,6 +275,7 @@ class MainWindow(QMainWindow):
             progressText.setText('设置第%s个悬浮窗播放器...' % str(i + 1))
             app.processEvents()
             logging.info("VLC设置完毕 %s / 9" % str(i + 1))
+        # 设置所有播放器布局
         self.setPlayer()
 
         self.controlDock = QDockWidget('控制条')
@@ -277,11 +287,6 @@ class MainWindow(QMainWindow):
         self.controlDock.setWidget(controlWidget)
         self.controlBarLayout = QGridLayout(controlWidget)
         # self.controlDock.show() if self.config['control'] else self.controlDock.hide()
-
-        self.globalPlayToken = True
-        self.play = PushButton(self.style().standardIcon(QStyle.SP_MediaPause))
-        self.play.clicked.connect(self.globalMediaPlay)
-        self.controlBarLayout.addWidget(self.play, 0, 0, 1, 1)
         self.reload = PushButton(self.style().standardIcon(QStyle.SP_BrowserReload))
         self.reload.clicked.connect(self.globalMediaReload)
         self.controlBarLayout.addWidget(self.reload, 0, 1, 1, 1)
@@ -289,6 +294,7 @@ class MainWindow(QMainWindow):
         self.stop.clicked.connect(self.globalMediaStop)
         self.controlBarLayout.addWidget(self.stop, 0, 2, 1, 1)
 
+        # 全局弹幕设置
         self.danmuOption = TextOpation()
         self.danmuOption.setWindowTitle('全局弹幕窗设置')
         self.danmuOption.opacitySlider.value.connect(self.setGlobalDanmuOpacity)
@@ -303,22 +309,25 @@ class MainWindow(QMainWindow):
         # self.globalDanmuToken = True
         # self.danmuButton.clicked.connect(self.globalDanmuShow)
         self.controlBarLayout.addWidget(self.danmuButton, 0, 3, 1, 1)
+
+        # 全局静音
         self.globalMuteToken = False
         self.volumeButton = PushButton(self.style().standardIcon(QStyle.SP_MediaVolume))
         self.volumeButton.clicked.connect(self.globalMediaMute)
         self.controlBarLayout.addWidget(self.volumeButton, 1, 0, 1, 1)
+        # 全局音量滑条
         self.slider = Slider()
         self.slider.setValue(self.config['globalVolume'])
         self.slider.value.connect(self.globalSetVolume)
         self.controlBarLayout.addWidget(self.slider, 1, 1, 1, 3)
         progressText.setText('设置播放器控制...')
 
+        # 添加主播按钮
         self.addButton = QPushButton('+')
         self.addButton.setFixedSize(160, 90)
         self.addButton.setStyleSheet('border:3px dotted #EEEEEE')
         self.addButton.setFont(QFont('Arial', 24, QFont.Bold))
         progressText.setText('设置添加控制...')
-
         self.controlBarLayout.addWidget(self.addButton, 2, 0, 1, 4)
         progressText.setText('设置全局控制...')
 
@@ -332,6 +341,8 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.TopDockWidgetArea, self.cardDock)
 
         # self.controlBarLayout.addWidget(self.scrollArea, 3, 0, 1, 5)
+
+        # 主播添加窗口
         self.liverPanel = LiverPanel(self.config['roomid'], application_path)
         self.liverPanel.addLiverRoomWidget.getHotLiver.start()
         self.liverPanel.addToWindow.connect(self.addCoverToPlayer)
@@ -343,6 +354,7 @@ class MainWindow(QMainWindow):
         self.liverPanel.updatePlayingStatus(self.config['player'])
         progressText.setText('设置主播选择控制...')
 
+        # ---- 菜单设置 ----
         self.optionMenu = self.menuBar().addMenu('设置')
         self.controlBarLayoutToken = self.config['control']
         layoutConfigAction = QAction('布局方式', self, triggered=self.openLayoutSetting)
@@ -403,6 +415,7 @@ class MainWindow(QMainWindow):
         # self.payMenu.addAction(killAction)
         progressText.setText('设置关于菜单...')
 
+        # 鼠标和计时器
         self.oldMousePos = QPoint(0, 0)  # 初始化鼠标坐标
         self.hideMouseCnt = 90
         self.mouseTrackTimer = QTimer()
@@ -743,17 +756,22 @@ class MainWindow(QMainWindow):
             videoWidget.textBrowser.move(videoPos + videoWidget.textPosDelta)
             videoWidget.textPosDelta = videoWidget.textBrowser.pos() - videoPos
 
-    def changeEvent(self, QEvent):  # 当用户最小化界面的时候把弹幕机也隐藏了
-        try:
-            if self.isMinimized():
-                for videoWidget in self.videoWidgetList:
-                    videoWidget.textBrowser.hide()
-            else:
-                for index, videoWidget in enumerate(self.videoWidgetList):
-                    if self.config['danmu'][index][0] and not videoWidget.isHidden():  # 显示弹幕机
-                        videoWidget.textBrowser.show()
-        except:
-            logging.exception('弹幕姬隐藏/显示切换出错')
+    def hideEvent(self, e: QHideEvent) -> None:
+        """主窗口隐藏：关闭、最小化
+        隐藏所有弹幕机
+        """
+        logging.debug(f"主窗口已隐藏")
+        for videoWidget in self.videoWidgetList:
+            videoWidget.textBrowser.hide()
+
+    def showEvent(self, e: QShowEvent) -> None:
+        """主窗口显示：打开、最大化
+        显示开启的弹幕机
+        """
+        logging.debug(f"主窗口已显示")
+        for index, videoWidget in enumerate(self.videoWidgetList):
+            if self.config['danmu'][index][0] and not videoWidget.isHidden():
+                videoWidget.textBrowser.show()
 
     def closeEvent(self, QCloseEvent):
         self.hide()
@@ -923,13 +941,17 @@ class MainWindow(QMainWindow):
                     break
 
 
+# 程序入口点
 if __name__ == '__main__':
+    # 平台相关 patch
     if platform.system() == 'Windows':
         ctypes.windll.kernel32.SetDllDirectoryW(None)
     if getattr(sys, 'frozen', False):
         application_path = os.path.dirname(sys.executable)
     elif __file__:
         application_path = os.path.dirname(__file__)
+
+    # 缓存、日志文件夹初始化
     cachePath = os.path.join(application_path, 'cache')
     logsPath = os.path.join(application_path, 'logs')
     if not os.path.exists(cachePath):  # 启动前初始化cache文件夹
@@ -944,20 +966,21 @@ if __name__ == '__main__':
     cacheFolder = os.path.join(application_path, 'cache/%d' % time.time())  # 初始化缓存文件夹
     os.mkdir(cacheFolder)
 
-    # 主程序注释 + 应用qss
+    # 应用qss
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
     with open(os.path.join(application_path, 'utils/qdark.qss'), 'r') as f:
         qss = f.read()
     app.setStyleSheet(qss)
     app.setFont(QFont('微软雅黑', 9))
-    # 日志采集
+
+    # 日志采集初始化
     log.init_log(application_path)
     sys.excepthook = uncaughtExceptionHandler
     sys.unraisablehook = unraisableExceptionHandler
     threading.excepthook = thraedingExceptionHandler
     loggingSystemInfo()
-
+    # vlc 版本信息log
     import vlc
     vlc_libvlc_env = os.getenv('PYTHON_VLC_LIB_PATH', '')
     vlc_plugin_env = os.getenv('PYTHON_VLC_MODULE_PATH', '')
@@ -975,6 +998,7 @@ if __name__ == '__main__':
     progressText.setText("加载中...")
     progressText.setGeometry(0, 0, 170, 20)
     splash.show()
+
     # 主页面入口
     mainWindow = MainWindow(cacheFolder, progressBar, progressText)
     mainWindow.showMaximized()
