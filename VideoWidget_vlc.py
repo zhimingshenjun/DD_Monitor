@@ -181,6 +181,7 @@ class VideoWidget(QFrame):
     hideBarKey = pyqtSignal()  # 隐藏控制条快捷键
     fullScreenKey = pyqtSignal()  # 全屏快捷键
     muteExceptKey = pyqtSignal()  # 除了这个播放器 其他全部静音快捷键
+    closePopWindow = pyqtSignal(list)  # 关闭悬浮窗
 
     def __init__(self, id, volume, cacheFolder, top=False, title='', resize=[],
                  textSetting=[True, 20, 2, 6, 0, '【 [ {', 10], maxCacheSize=2048000, startWithDanmu=True):
@@ -364,14 +365,45 @@ class VideoWidget(QFrame):
         self.checkPlaying.timeout.connect(self.checkPlayStatus)
         logging.info(f"{self.name_str} VLC 播放器构造完毕, 缓存大小: %dkb , 置顶?: %s, 启用弹幕?: %s" % (self.maxCacheSize, self.top, self.startWithDanmu))
 
+        self.audioTimer = QTimer()
+        self.audioTimer.timeout.connect(self.checkAudio)
+        self.audioTimer.setInterval(100)
+
     def checkPlayStatus(self):  # 播放卡住了
         if not self.player.is_playing() and not self.isHidden() and self.liveStatus != 0 and not self.userPause:
             self.retryTimes += 1
             if self.retryTimes > 10:  # 10秒内未刷新
                 self.mediaReload()  # 彻底刷新
             else:
-                self.player.pause()  # 不完全刷新
+                # self.player.pause()  # 不完全刷新
+                self.player.stop()
+                self.player.release()
+                self.player = self.instance.media_player_new()
+                self.player.video_set_mouse_input(False)
+                self.player.video_set_key_input(False)
+                # 将播放器实例绑定到 VideoFrame: QFrame
+                if platform.system() == 'Windows':
+                    self.player.set_hwnd(self.videoFrame.winId())
+                elif platform.system() == 'Darwin':  # for MacOS
+                    self.player.set_nsobject(int(self.videoFrame.winId()))
+                else:
+                    self.player.set_xwindow(self.videoFrame.winId())
+                if self.hardwareDecode:
+                    self.media = self.instance.media_new(self.cacheName, 'avcodec-hw=dxva2')  # 设置vlc并硬解播放
+                else:
+                    self.media = self.instance.media_new(self.cacheName)  # 软解
+                self.player.set_media(self.media)  # 设置视频
+                self.player.audio_set_channel(self.audioChannel)
                 self.player.play()
+                self.audioTimer.stop()
+                self.audioTimer.start()  # 检测音量
+
+    def checkAudio(self):
+        volume = int(self.volume * self.volumeAmplify)
+        if self.player.audio_get_volume() != volume:
+            self.player.audio_set_volume(volume)
+        else:
+            self.audioTimer.stop()
 
     def initTextPos(self):  # 初始化弹幕机位置
         videoPos = self.mapToGlobal(self.videoFrame.pos())
@@ -643,16 +675,22 @@ class VideoWidget(QFrame):
             self.audioChannel = 5
         elif action == chooseAmp_0_5:
             self.volumeAmplify = 0.5
+            self.audioTimer.start()
         elif action == chooseAmp_1:
             self.volumeAmplify = 1.0
+            self.audioTimer.start()
         elif action == chooseAmp_1_5:
             self.volumeAmplify = 1.5
+            self.audioTimer.start()
         elif action == chooseAmp_2:
             self.volumeAmplify = 2.0
+            self.audioTimer.start()
         elif action == chooseAmp_3:
             self.volumeAmplify = 3.0
+            self.audioTimer.start()
         elif action == chooseAmp_4:
             self.volumeAmplify = 4.0
+            self.audioTimer.start()
         if not self.top:
             if action == popWindow:
                 self.popWindow.emit([self.id, self.roomID, self.quality, False, self.startWithDanmu])
@@ -679,6 +717,7 @@ class VideoWidget(QFrame):
                 else:
                     self.showFullScreen()
             elif action == exit:
+                self.closePopWindow.emit([self.id, self.roomID])
                 self.hide()
                 self.mediaStop()
                 self.textBrowser.hide()
@@ -688,6 +727,7 @@ class VideoWidget(QFrame):
         修改务必同步右键菜单的退出事件："action == exit"
         """
         event.ignore()  # 忽略关闭事件
+        self.closePopWindow.emit([self.id, self.roomID])
         self.hide()
         self.mediaStop()
         self.textBrowser.hide()
@@ -840,6 +880,7 @@ class VideoWidget(QFrame):
         self.player.play()
         self.moveTimer.start()  # 启动移动弹幕窗的timer
         self.checkPlaying.start(1000)  # 启动播放卡顿检测定时器
+        self.audioTimer.start()  # 检测音量是否正确
 
     def setTitle(self):
         if self.roomID == '0':

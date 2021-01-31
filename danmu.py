@@ -56,7 +56,7 @@ class ToolButton(QToolButton):
 
 
 class TextOpation(QWidget):
-    def __init__(self, setting=[20, 1, 7, 0, '【 [ {', 10]):
+    def __init__(self, setting=[50, 1, 7, 0, '【 [ {', 10]):
         super(TextOpation, self).__init__()
         self.resize(300, 300)
         self.setWindowTitle('弹幕窗设置')

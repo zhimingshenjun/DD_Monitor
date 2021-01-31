@@ -256,6 +256,7 @@ class MainWindow(QMainWindow):
             self.popVideoWidgetList.append(VideoWidget(i + 9, volume, cacheFolder, True, '悬浮窗', [1280, 720],
                                                        maxCacheSize=self.config['maxCacheSize'],
                                                        startWithDanmu=self.config['startWithDanmu']))
+            self.popVideoWidgetList[i].closePopWindow.connect(self.closePopWindow)
             vlcProgressCounter += 1
             progressBar.setValue(vlcProgressCounter)
             progressText.setText('设置第%s个悬浮窗播放器...' % str(i + 1))
@@ -572,8 +573,8 @@ class MainWindow(QMainWindow):
 
     def setGlobalDanmuOpacity(self, value):
         if value < 7: value = 7  # 最小透明度
-        value = int(value / 101 * 256)
-        color = str(hex(value))[2:] + '000000'
+        opacity = int(value / 101 * 256)
+        color = str(hex(opacity))[2:] + '000000'
         for videoWidget in self.videoWidgetList + self.popVideoWidgetList:
             videoWidget.textSetting[1] = value  # 记录设置
             videoWidget.textBrowser.textBrowser.setStyleSheet('background-color:#%s' % color)
@@ -880,6 +881,15 @@ class MainWindow(QMainWindow):
                 if not videoWidget.isHidden():
                     videoWidget.mediaMute(1)  # 取消静音
         self.soloToken = not self.soloToken
+
+    def closePopWindow(self, info):
+        id, roomID = info
+        if not self.videoWidgetList[id - 9].isHidden() and roomID != '0':  # 房间号有效
+            self.videoWidgetList[id - 9].roomID = roomID
+            self.videoWidgetList[id - 9].mediaReload()
+            self.config['player'][id - 9] = roomID
+            self.liverPanel.updatePlayingStatus(self.config['player'])
+            self.dumpConfig.start()
 
     def keyPressEvent(self, QKeyEvent):
         if QKeyEvent.key() == Qt.Key_Escape or QKeyEvent.key() == Qt.Key_F:
