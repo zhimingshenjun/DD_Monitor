@@ -203,15 +203,8 @@ class MainWindow(QMainWindow):
                     danmuConfig.append(10)
         else:
             self.config = {
-                'roomid': {'21396545': False, '21402309': False, '22384516': False, '8792912': False,
-                           '21696950': False, '14327465': False, '704808': True, '1321846': False,
-                           '56237': False, '8725120': False, '22347054': False, '14052636': False,
-                           '21320551': False, '876396': False, '21448649': False, '24393': False,
-                           '12845193': False, '41682': False, '21652717': False, '22571958': False,
-                           '21919321': True, '21013446': False},  # 置顶显示
+                'roomid': {'21396545': False, '21402309': False, '22384516': False, '8792912': False},  # 置顶显示
                 'layout': [(0, 0, 1, 1), (0, 1, 1, 1), (1, 0, 1, 1), (1, 1, 1, 1)],
-                # 'player': ['21396545', '21402309', '22384516', '8792912',
-                #            '21696950', '14327465', '704808', '1321846', '318'],
                 'player': ['0'] * 9,
                 'quality': [80] * 9,
                 'audioChannel': [0] * 9,
@@ -839,7 +832,7 @@ class MainWindow(QMainWindow):
         self.savePath = QFileDialog.getSaveFileName(self, "选择保存路径", 'DD监控室预设', "*.json")[0]
         if self.savePath:  # 保存路径有效
             try:
-                with open(self.savePath, 'w') as f:
+                with codecs.open(self.savePath, 'w', encoding='utf-8') as f:
                     f.write(json.dumps(self.config, ensure_ascii=False))
                 QMessageBox.information(self, '导出预设', '导出完成', QMessageBox.Ok)
             except:
@@ -853,6 +846,13 @@ class MainWindow(QMainWindow):
                 try:
                     with codecs.open(jsonPath, 'r', encoding='utf-8') as f:
                         config = json.loads(f.read())
+                except UnicodeDecodeError:
+                    try:
+                        with codecs.open(jsonPath, 'r', encoding='gbk') as f:
+                            config = json.loads(f.read())
+                    except:
+                        logging.exception('json 配置导入失败')
+                        config = {}
                 except:
                     logging.exception('json 配置导入失败')
                     config = {}
