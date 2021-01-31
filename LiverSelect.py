@@ -605,6 +605,9 @@ class AddLiverRoomWidget(QWidget):
         self.refreshButton = PushButton('更新名单')
         self.refreshButton.clicked.connect(self.refreshHacoList)
         hacoLayout.addWidget(self.refreshButton, 0, 0, 1, 1)
+        self.vtbSearchButton = PushButton('查询VUP')
+        self.vtbSearchButton.clicked.connect(self.vtbSearch)
+        hacoLayout.addWidget(self.vtbSearchButton, 0, 1, 1, 1)
         self.hacoTable = QTableWidget()
         self.hacoTable.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.hacoTable.verticalScrollBar().installEventFilter(self)
@@ -714,6 +717,9 @@ class AddLiverRoomWidget(QWidget):
         self.refreshButton.clicked.disconnect(self.refreshHacoList)
         self.refreshButton.setText('更新中...')
         self.downloadVTBList.start()
+
+    def vtbSearch(self):
+        QDesktopServices.openUrl(QUrl(r'https://vtbs.moe/detail'))
 
     def collectVTBList(self, vtbList):
         try:
