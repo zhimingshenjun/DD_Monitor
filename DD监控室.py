@@ -742,17 +742,22 @@ class MainWindow(QMainWindow):
             videoWidget.textBrowser.move(videoPos + videoWidget.textPosDelta)
             videoWidget.textPosDelta = videoWidget.textBrowser.pos() - videoPos
 
-    def changeEvent(self, QEvent):  # 当用户最小化界面的时候把弹幕机也隐藏了
-        try:
-            if self.isMinimized():
-                for videoWidget in self.videoWidgetList:
-                    videoWidget.textBrowser.hide()
-            else:
-                for index, videoWidget in enumerate(self.videoWidgetList):
-                    if self.config['danmu'][index][0] and not videoWidget.isHidden():  # 显示弹幕机
-                        videoWidget.textBrowser.show()
-        except:
-            logging.exception('弹幕姬隐藏/显示切换出错')
+    def hideEvent(self, e: QHideEvent) -> None:
+        """主窗口隐藏：关闭、最小化
+        隐藏所有弹幕机
+        """
+        logging.debug(f"主窗口已隐藏")
+        for videoWidget in self.videoWidgetList:
+            videoWidget.textBrowser.hide()
+
+    def showEvent(self, e: QShowEvent) -> None:
+        """主窗口显示：打开、最大化
+        显示开启的弹幕机
+        """
+        logging.debug(f"主窗口已显示")
+        for index, videoWidget in enumerate(self.videoWidgetList):
+            if self.config['danmu'][index][0] and not videoWidget.isHidden():
+                videoWidget.textBrowser.show()
 
     def closeEvent(self, QCloseEvent):
         self.hide()
