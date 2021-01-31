@@ -22,7 +22,7 @@ jobs:
     - name: Archive Build
       uses: actions/upload-artifact@v2
       with:
-        name: linux-build
+        name: ddmonitor-linux-build
         path: dist/DDMonitor
   
   build-windows:
@@ -55,7 +55,7 @@ jobs:
     - name: Archive Build
       uses: actions/upload-artifact@v2
       with:
-        name: windows-build
+        name: ddmonitor-windows-build
         path: dist/DDMonitor
     
   build-macos:
@@ -77,6 +77,6 @@ jobs:
     - name: Archive Build
       uses: actions/upload-artifact@v2
       with:
-        name: macos-build
+        name: ddmonitor-macos-build
         path: dist/DDMonitor
   
