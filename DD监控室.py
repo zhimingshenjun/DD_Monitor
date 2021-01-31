@@ -289,7 +289,10 @@ class MainWindow(QMainWindow):
         controlWidget = ControlWidget()
         self.controlDock.setWidget(controlWidget)
         self.controlBarLayout = QGridLayout(controlWidget)
-        # self.controlDock.show() if self.config['control'] else self.controlDock.hide()
+        self.globalPlayToken = True
+        self.play = PushButton(self.style().standardIcon(QStyle.SP_MediaPause))
+        self.play.clicked.connect(self.globalMediaPlay)
+        self.controlBarLayout.addWidget(self.play, 0, 0, 1, 1)
         self.reload = PushButton(self.style().standardIcon(QStyle.SP_BrowserReload))
         self.reload.clicked.connect(self.globalMediaReload)
         self.controlBarLayout.addWidget(self.reload, 0, 1, 1, 1)

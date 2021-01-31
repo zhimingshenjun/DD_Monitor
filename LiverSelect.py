@@ -461,23 +461,20 @@ class DownloadVTBList(QThread):
 
     def run(self):
         try:
-            # TODO 修改vtbs的请求方式
-            pass
-            # headers = {
-            #     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36'}
-            # r = requests.get(r'https://ddmonitor-resource.oss-cn-beijing.aliyuncs.com/vtb.csv', headers=headers)
-            # r.encoding = 'gbk'
-            # vtbList = []
-            # html = r.text.split('\n')
-            # for cnt, line in enumerate(html):
-                # print(line)
-            #     if 'blob-num js-line-number' in line:
-            #         vtbID = html[cnt + 1].split('>')[1].split('<')[0]
-            #         roomID = html[cnt + 2].split('>')[1].split('<')[0]
-            #         haco = html[cnt + 3].split('>')[1].split('<')[0]
-            #         vtbList.append('%s,%s,%s\n' % (vtbID, roomID, haco))
-            # if vtbList:
-            #     self.vtbList.emit(vtbList)
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36'}
+            r = requests.get(r'https://github.com/zhimingshenjun/DD_Monitor/blob/master/utils/vtb.csv', headers=headers)
+            # r.encoding = 'utf8'
+            vtbList = []
+            html = r.text.split('\n')
+            for cnt, line in enumerate(html):
+                if 'blob-num js-line-number' in line:
+                    vtbID = html[cnt + 1].split('>')[1].split('<')[0]
+                    roomID = html[cnt + 2].split('>')[1].split('<')[0]
+                    haco = html[cnt + 3].split('>')[1].split('<')[0]
+                    vtbList.append('%s,%s,%s\n' % (vtbID, roomID, haco))
+            if vtbList:
+                self.vtbList.emit(vtbList)
         except:
             logging.exception("vtbs 列表获取失败")
 
@@ -605,6 +602,9 @@ class AddLiverRoomWidget(QWidget):
         hacoPage = QWidget()  # 添加内置的vtb列表
         hacoLayout = QGridLayout(hacoPage)
         hacoLayout.setContentsMargins(1, 1, 1, 1)
+        self.refreshButton = PushButton('更新名单')
+        self.refreshButton.clicked.connect(self.refreshHacoList)
+        hacoLayout.addWidget(self.refreshButton, 0, 0, 1, 1)
         self.hacoTable = QTableWidget()
         self.hacoTable.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.hacoTable.verticalScrollBar().installEventFilter(self)
@@ -632,10 +632,10 @@ class AddLiverRoomWidget(QWidget):
         self.hacoTable.setColumnWidth(0, 160)
         self.hacoTable.setColumnWidth(1, 160)
         self.hacoTable.setColumnWidth(2, 160)
-        hacoLayout.addWidget(self.hacoTable)
+        hacoLayout.addWidget(self.hacoTable, 1, 0, 10, 5)
         self.downloadVTBList = DownloadVTBList()
         self.downloadVTBList.vtbList.connect(self.collectVTBList)
-        self.downloadVTBList.start()
+        # self.downloadVTBList.start()
 
         tab.addTab(hotLiverPage, '正在直播')
         tab.addTab(hacoPage, '个人势/箱')
@@ -710,14 +710,33 @@ class AddLiverRoomWidget(QWidget):
                     except:
                         logging.exception('热门直播表更换失败')
 
+    def refreshHacoList(self):
+        self.refreshButton.clicked.disconnect(self.refreshHacoList)
+        self.refreshButton.setText('更新中...')
+        self.downloadVTBList.start()
+
     def collectVTBList(self, vtbList):
         try:
             vtbs = codecs.open(os.path.join(self.application_path, 'utils/vtb.csv'), 'w', encoding='utf-8')
             for line in vtbList:
                 vtbs.write(line)
             vtbs.close()
+            self.vtbList = []
+            for line in vtbList:
+                self.vtbList.append(line.split(','))
+            self.hacoTable.clear()
+            self.hacoTable.setRowCount(len(self.vtbList))
+            self.hacoTable.setVerticalHeaderLabels(['添加'] * len(self.vtbList))
+            self.hacoTable.setHorizontalHeaderLabels(['主播名', '直播间房号', '所属'])
+            for y, line in enumerate(self.vtbList):
+                for x in range(3):
+                    self.hacoTable.setItem(y, x, QTableWidgetItem(line[x]))
+            QMessageBox.information(self, '更新VUP名单', '更新完成', QMessageBox.Ok)
         except:
             logging.exception('vtb.csv 写入失败')
+            QMessageBox.information(self, '更新VUP名单', '更新失败 请检查网络', QMessageBox.Ok)
+        self.refreshButton.setText('更新名单')
+        self.refreshButton.clicked.connect(self.refreshHacoList)
 
     def sendSelectedRoom(self):
         self.closeEvent(None)
