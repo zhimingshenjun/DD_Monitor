@@ -8,3 +8,4 @@ PyQt5-sip==12.8.1
 python-vlc==3.0.11115
 requests==2.25.1
 urllib3==1.26.3
+pyinstaller==4.2
