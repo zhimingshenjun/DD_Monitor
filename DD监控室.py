@@ -856,6 +856,14 @@ if __name__ == '__main__':
     threading.excepthook = thraedingExceptionHandler
     loggingSystemInfo()
 
+    import vlc
+    vlc_libvlc_env = os.getenv('PYTHON_VLC_LIB_PATH', '')
+    vlc_plugin_env = os.getenv('PYTHON_VLC_MODULE_PATH', '')
+    logging.info(f"libvlc env: PYTHON_VLC_LIB_PATH={vlc_libvlc_env}")
+    logging.info(f"plugin env: PYTHON_VLC_MODULE_PATH={vlc_plugin_env}")
+    logging.info(f"libvlc path: {vlc.dll._name}")
+    logging.info(f"vlc version: {vlc.libvlc_get_version()}")
+
     # 欢迎页面
     splash = QSplashScreen(QPixmap(os.path.join(application_path, 'utils/splash.jpg')), Qt.WindowStaysOnTopHint)
     progressBar = QProgressBar(splash)

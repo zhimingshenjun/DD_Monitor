@@ -18,3 +18,7 @@ logs/
 config_*.json
 config.json
 !utils/config_default.json
+
+# VLC bin
+plugins/
+*.dll
