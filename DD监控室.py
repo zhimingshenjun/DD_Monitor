@@ -410,7 +410,7 @@ class MainWindow(QMainWindow):
             # pass
             self.videoWidgetList[self.videoIndex].mediaReload()
         else:
-            self.videoWidgetList[self.videoIndex].player.stop()
+            self.videoWidgetList[self.videoIndex].playerRestart()
         self.videoIndex += 1
 
     def addMedia(self, info):  # 窗口 房号
