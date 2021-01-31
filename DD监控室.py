@@ -22,6 +22,7 @@ import codecs
 import dns.resolver
 from ReportException import thraedingExceptionHandler, uncaughtExceptionHandler,\
     unraisableExceptionHandler, loggingSystemInfo
+from danmu import TextOpation, ToolButton
 
 
 application_path = ""
@@ -282,9 +283,20 @@ class MainWindow(QMainWindow):
         self.stop = PushButton(self.style().standardIcon(QStyle.SP_DialogCancelButton))
         self.stop.clicked.connect(self.globalMediaStop)
         self.controlBarLayout.addWidget(self.stop, 0, 2, 1, 1)
-        self.danmuButton = PushButton(text='弹')
-        self.globalDanmuToken = True
-        self.danmuButton.clicked.connect(self.globalDanmuShow)
+
+        self.danmuOption = TextOpation()
+        self.danmuOption.setWindowTitle('全局弹幕窗设置')
+        self.danmuOption.opacitySlider.value.connect(self.setGlobalDanmuOpacity)
+        self.danmuOption.horizontalCombobox.currentIndexChanged.connect(self.setGlobalHorizontalPercent)
+        self.danmuOption.verticalCombobox.currentIndexChanged.connect(self.setGlobalVerticalPercent)
+        self.danmuOption.translateCombobox.currentIndexChanged.connect(self.setGlobalTranslateBrowser)
+        self.danmuOption.translateFitler.textChanged.connect(self.setGlobalTranslateFilter)
+        self.danmuOption.fontSizeCombox.currentIndexChanged.connect(self.setGlobalFontSize)
+        self.danmuButton = ToolButton(self.style().standardIcon(QStyle.SP_FileDialogDetailedView))
+        self.danmuButton.clicked.connect(self.danmuOption.show)
+        # self.danmuButton = PushButton(text='弹')
+        # self.globalDanmuToken = True
+        # self.danmuButton.clicked.connect(self.globalDanmuShow)
         self.controlBarLayout.addWidget(self.danmuButton, 0, 3, 1, 1)
         self.globalMuteToken = False
         self.volumeButton = PushButton(self.style().standardIcon(QStyle.SP_MediaVolume))
@@ -550,13 +562,73 @@ class MainWindow(QMainWindow):
         for videoWidget in self.videoWidgetList:
             videoWidget.mediaStop()
 
-    def globalDanmuShow(self):
-        self.globalDanmuToken = not self.globalDanmuToken
-        for videoWidget in self.videoWidgetList:
-            if not videoWidget.isHidden():
-                videoWidget.textBrowser.show() if self.globalDanmuToken else videoWidget.textBrowser.hide()
-        for danmuConfig in self.config['danmu']:
-            danmuConfig[0] = self.globalDanmuToken
+    # def globalDanmuShow(self):  # 已弃用
+    #     self.globalDanmuToken = not self.globalDanmuToken
+    #     for videoWidget in self.videoWidgetList:
+    #         if not videoWidget.isHidden():
+    #             videoWidget.textBrowser.show() if self.globalDanmuToken else videoWidget.textBrowser.hide()
+    #     for danmuConfig in self.config['danmu']:
+    #         danmuConfig[0] = self.globalDanmuToken
+
+    def setGlobalDanmuOpacity(self, value):
+        if value < 7: value = 7  # 最小透明度
+        value = int(value / 101 * 256)
+        color = str(hex(value))[2:] + '000000'
+        for videoWidget in self.videoWidgetList + self.popVideoWidgetList:
+            videoWidget.textSetting[1] = value  # 记录设置
+            videoWidget.textBrowser.textBrowser.setStyleSheet('background-color:#%s' % color)
+            videoWidget.textBrowser.transBrowser.setStyleSheet('background-color:#%s' % color)
+            videoWidget.setDanmu.emit()
+
+    def setGlobalHorizontalPercent(self, index):  # 设置弹幕框水平宽度
+        for videoWidget in self.videoWidgetList + self.popVideoWidgetList:
+            videoWidget.textSetting[2] = index
+            videoWidget.horiPercent = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0][index]  # 记录横向占比
+            width = videoWidget.width() * videoWidget.horiPercent
+            videoWidget.textBrowser.resize(width, videoWidget.textBrowser.height())
+            videoWidget.textBrowser.textBrowser.verticalScrollBar().setValue(100000000)
+            videoWidget.textBrowser.transBrowser.verticalScrollBar().setValue(100000000)
+            videoWidget.setDanmu.emit()
+
+    def setGlobalVerticalPercent(self, index):  # 设置弹幕框垂直高度
+        for videoWidget in self.videoWidgetList + self.popVideoWidgetList:
+            videoWidget.textSetting[3] = index
+            videoWidget.vertPercent = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0][index]  # 记录纵向占比
+            height = videoWidget.height() * videoWidget.vertPercent
+            videoWidget.textBrowser.resize(videoWidget.textBrowser.width(), height)
+            videoWidget.textBrowser.textBrowser.verticalScrollBar().setValue(100000000)
+            videoWidget.textBrowser.transBrowser.verticalScrollBar().setValue(100000000)
+            videoWidget.setDanmu.emit()
+
+    def setGlobalTranslateBrowser(self, index):
+        for videoWidget in self.videoWidgetList + self.popVideoWidgetList:
+            videoWidget.textSetting[4] = index
+            if index == 0:  # 显示弹幕和同传
+                videoWidget.textBrowser.textBrowser.show()
+                videoWidget.textBrowser.transBrowser.show()
+            elif index == 1:  # 只显示弹幕
+                videoWidget.textBrowser.transBrowser.hide()
+                videoWidget.textBrowser.textBrowser.show()
+            elif index == 2:  # 只显示同传
+                videoWidget.textBrowser.textBrowser.hide()
+                videoWidget.textBrowser.transBrowser.show()
+            width = videoWidget.width() * videoWidget.horiPercent
+            height = videoWidget.height() * videoWidget.vertPercent
+            videoWidget.textBrowser.resize(width, height)
+            videoWidget.setDanmu.emit()
+
+    def setGlobalTranslateFilter(self, filterWords):
+        for videoWidget in self.videoWidgetList + self.popVideoWidgetList:
+            videoWidget.textSetting[5] = filterWords
+            videoWidget.filters = filterWords.split(' ')
+            videoWidget.setDanmu.emit()
+
+    def setGlobalFontSize(self, index):
+        for videoWidget in self.videoWidgetList + self.popVideoWidgetList:
+            videoWidget.textSetting[6] = index
+            videoWidget.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', index + 5, QFont.Bold))
+            videoWidget.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', index + 5, QFont.Bold))
+            videoWidget.setDanmu.emit()
 
     def globalQuality(self, quality):
         for videoWidget in self.videoWidgetList:

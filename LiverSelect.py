@@ -235,7 +235,7 @@ class CoverLabel(QLabel):
             self.roomTitle = ''
             self.setToolTip(self.roomTitle)
             if info[2]:
-                self.titleLabel.setText(info[2][:15])
+                self.titleLabel.setText(info[2])
                 self.stateLabel.setText('房间可能被封')
             else:
                 self.titleLabel.setText(info[1])
@@ -247,7 +247,7 @@ class CoverLabel(QLabel):
                 self.downloadFace.setUrl(info[3])  # 启动下载头像线程
                 self.downloadFace.start()
                 # self.roomIDLabel.setText(info[1])  # 房间号
-                self.titleLabel.setText(info[2][:15])  # 名字
+                self.titleLabel.setText(info[2])  # 名字
                 self.title = info[2]
             if info[4] == 1:  # 直播中
                 self.liveState = 1
