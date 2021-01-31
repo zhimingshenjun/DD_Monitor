@@ -199,6 +199,7 @@ class VideoWidget(QFrame):
         self.audioChannel = 0  # 0 原始音效  5 杜比音效
         self.volume = volume
         self.volumeAmplify = 1.0  # 音量加倍
+        self.muted = False
         self.hardwareDecode = True
         self.leftButtonPress = False
         self.rightButtonPress = False
@@ -374,7 +375,6 @@ class VideoWidget(QFrame):
                 self.player = self.instance.media_player_new()
                 self.player.video_set_mouse_input(False)
                 self.player.video_set_key_input(False)
-                # 将播放器实例绑定到 VideoFrame: QFrame
                 if platform.system() == 'Windows':
                     self.player.set_hwnd(self.videoFrame.winId())
                 elif platform.system() == 'Darwin':  # for MacOS
@@ -395,6 +395,8 @@ class VideoWidget(QFrame):
         volume = int(self.volume * self.volumeAmplify)
         if self.player.audio_get_volume() != volume:
             self.player.audio_set_volume(volume)
+        elif self.player.audio_get_mute != self.muted:
+            self.player.audio_set_mute(self.muted)
         else:
             self.audioTimer.stop()
 
@@ -710,21 +712,23 @@ class VideoWidget(QFrame):
                 else:
                     self.showFullScreen()
             elif action == exit:
-                self.closePopWindow.emit([self.id, self.roomID])
-                self.hide()
-                self.mediaStop()
-                self.textBrowser.hide()
+                if self.top:
+                    self.closePopWindow.emit([self.id, self.roomID])
+                    self.hide()
+                    self.mediaStop()
+                    self.textBrowser.hide()
 
     def closeEvent(self, event):
         """拦截关闭按钮事件，隐藏弹出的悬浮窗
         修改务必同步右键菜单的退出事件："action == exit"
         """
         event.ignore()  # 忽略关闭事件
-        self.closePopWindow.emit([self.id, self.roomID])
-        self.hide()
-        self.mediaStop()
-        self.textBrowser.hide()
-        logging.debug(f"{self.name_str}隐藏")
+        if self.top:
+            self.closePopWindow.emit([self.id, self.roomID])
+            self.hide()
+            self.mediaStop()
+            self.textBrowser.hide()
+            logging.debug(f"{self.name_str}隐藏")
 
     def exportFinish(self, result):
         self.exportTip.hide()
@@ -800,20 +804,24 @@ class VideoWidget(QFrame):
         logging.debug(f"  bgein mute status={voice_str}")
 
         if force == 1:
-            self.player.audio_set_mute(False)
+            self.muted = False
+            # self.player.audio_set_mute(False)
             self.volumeButton.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
         elif force == 2:
-            self.player.audio_set_mute(True)
+            self.muted = True
+            # self.player.audio_set_mute(True)
             self.volumeButton.setIcon(self.style().standardIcon(QStyle.SP_MediaVolumeMuted))
         elif self.player.audio_get_mute():
-            self.player.audio_set_mute(False)
+            self.muted = False
+            # self.player.audio_set_mute(False)
             self.volumeButton.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
         else:
-            self.player.audio_set_mute(True)
+            self.muted = True
+            # self.player.audio_set_mute(True)
             self.volumeButton.setIcon(self.style().standardIcon(QStyle.SP_MediaVolumeMuted))
-
+        self.audioTimer.start()
         if emit:
-            self.mutedChanged.emit([self.id, self.player.audio_get_mute()])
+            self.mutedChanged.emit([self.id, self.muted])
 
         voice_str = "音量Off" if self.player.audio_get_mute() else "音量On"
         logging.debug(f"  final mute status={voice_str}")

@@ -38,6 +38,7 @@ class ScrollArea(QScrollArea):
     def __init__(self):
         super(ScrollArea, self).__init__()
         self.multiple = self.width() // 169
+        self.horizontalScrollBar().setVisible(False)
 
     def wheelEvent(self, QEvent):
         if QEvent.angleDelta().y() < 0:
@@ -236,8 +237,8 @@ class MainWindow(QMainWindow):
                                                     startWithDanmu=self.config['startWithDanmu']))
             vlcProgressCounter += 1
             progressBar.setValue(vlcProgressCounter)
-            # self.videoWidgetList[i].mutedChanged.connect(self.mutedChanged)  # 硬盘io过高 屏蔽掉 退出的时候统一保存
-            # self.videoWidgetList[i].volumeChanged.connect(self.volumeChanged)  # 硬盘io过高 屏蔽掉 退出的时候统一保存
+            self.videoWidgetList[i].mutedChanged.connect(self.mutedChanged)
+            self.videoWidgetList[i].volumeChanged.connect(self.volumeChanged)
             self.videoWidgetList[i].addMedia.connect(self.addMedia)
             self.videoWidgetList[i].deleteMedia.connect(self.deleteMedia)
             self.videoWidgetList[i].exchangeMedia.connect(self.exchangeMedia)
@@ -263,6 +264,15 @@ class MainWindow(QMainWindow):
             app.processEvents()
             logging.info("VLC设置完毕 %s / 9" % str(i + 1))
         self.setPlayer()
+
+        self.scrollArea = ScrollArea()
+        self.scrollArea.setStyleSheet('border-width:0px')
+        # self.scrollArea.setMinimumHeight(111)
+        self.cardDock = QDockWidget('卡片槽')
+        self.cardDock.setWidget(self.scrollArea)
+        self.cardDock.setFloating(False)
+        self.cardDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.cardDock)
 
         self.controlDock = QDockWidget('控制条')
         self.controlDock.setFixedHeight(200)
@@ -317,15 +327,6 @@ class MainWindow(QMainWindow):
 
         self.controlBarLayout.addWidget(self.addButton, 2, 0, 1, 4)
         progressText.setText('设置全局控制...')
-
-        self.scrollArea = ScrollArea()
-        self.scrollArea.setStyleSheet('border-width:0px')
-        # self.scrollArea.setMinimumHeight(111)
-        self.cardDock = QDockWidget('卡片槽')
-        self.cardDock.setWidget(self.scrollArea)
-        self.cardDock.setFloating(False)
-        self.cardDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.cardDock)
 
         # self.controlBarLayout.addWidget(self.scrollArea, 3, 0, 1, 5)
         self.liverPanel = LiverPanel(self.config['roomid'], application_path)
@@ -514,12 +515,12 @@ class MainWindow(QMainWindow):
         id, muted = mutedInfo
         token = 2 if muted else 1
         self.config['muted'][id] = token
-        self.dumpConfig.start()
+        # self.dumpConfig.start()
 
     def volumeChanged(self, volumeInfo):
         id, value = volumeInfo
         self.config['volume'][id] = value
-        self.dumpConfig.start()
+        # self.dumpConfig.start()
 
     def globalMediaPlay(self):
         if self.globalPlayToken:
@@ -883,7 +884,7 @@ class MainWindow(QMainWindow):
 
     def closePopWindow(self, info):
         id, roomID = info
-        if not self.videoWidgetList[id - 9].isHidden() and roomID != '0':  # 房间号有效
+        if not self.videoWidgetList[id - 9].isHidden() and roomID != '0' and roomID:  # 房间号有效
             self.videoWidgetList[id - 9].roomID = roomID
             self.videoWidgetList[id - 9].mediaReload()
             self.config['player'][id - 9] = roomID
