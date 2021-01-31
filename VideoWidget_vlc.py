@@ -832,6 +832,11 @@ class VideoWidget(QFrame):
         self.moveTimer.start()  # 启动移动弹幕窗的timer
         self.checkPlaying.start(1000)  # 启动播放卡顿检测定时器
 
+    """==== self.player 相关函数 ====
+    + newPlayer()       新实例化一个 self.player。初始化用
+    + playerRestart()   重置 self.player
+    + playerFree()      释放并销毁 playerFree 实例
+    """
     def newPlayer(self):
         """实例化 player
         依赖实例化的 vlc （self.instance）
@@ -854,6 +859,11 @@ class VideoWidget(QFrame):
         self.player.stop()
         self.newPlayer()
         # 后续视频流设置由 GetMediaURL 发送 cacheName 信号执行 self.setMedia 完成
+
+    def playerFree(self):
+        """销毁 player 实例。退出主程序前调用"""
+        self.player.stop()
+        self.player.release()
 
     def setTitle(self):
         if self.roomID == '0':
