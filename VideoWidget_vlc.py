@@ -856,14 +856,16 @@ class VideoWidget(QFrame):
         """重置 player
         vlc 实例（self.instance）保持不动
         """
-        self.player.stop()
+        if self.player:
+            self.player.stop()
         self.newPlayer()
         # 后续视频流设置由 GetMediaURL 发送 cacheName 信号执行 self.setMedia 完成
 
     def playerFree(self):
         """销毁 player 实例。退出主程序前调用"""
-        self.player.stop()
-        self.player.release()
+        if self.player:
+            self.player.stop()
+            self.player.release()
 
     def setTitle(self):
         if self.roomID == '0':
