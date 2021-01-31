@@ -676,12 +676,11 @@ class MainWindow(QMainWindow):
         self.layoutSettingPanel.close()
         self.liverPanel.addLiverRoomWidget.close()
         for videoWidget in self.videoWidgetList:
-            videoWidget.playerFree()  # 销毁实例
             videoWidget.getMediaURL.recordToken = False  # 关闭缓存并清除
             videoWidget.getMediaURL.checkTimer.stop()
             videoWidget.checkPlaying.stop()
+            videoWidget.close()
         for videoWidget in self.popVideoWidgetList:  # 关闭悬浮窗
-            videoWidget.playerFree()
             videoWidget.getMediaURL.recordToken = False
             videoWidget.getMediaURL.checkTimer.stop()
             videoWidget.checkPlaying.stop()
