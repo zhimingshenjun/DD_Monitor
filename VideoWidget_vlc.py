@@ -275,16 +275,7 @@ class VideoWidget(QFrame):
         layout.addWidget(self.videoFrame, 0, 0, 12, 12)
         # vlc 实例
         self.instance = vlc.Instance()
-        self.player = self.instance.media_player_new()  # 视频播放
-        self.player.video_set_mouse_input(False)
-        self.player.video_set_key_input(False)
-        # 将播放器实例绑定到 VideoFrame: QFrame
-        if platform.system() == 'Windows':
-            self.player.set_hwnd(self.videoFrame.winId())
-        elif platform.system() == 'Darwin':  # for MacOS
-            self.player.set_nsobject(int(self.videoFrame.winId()))
-        else:
-            self.player.set_xwindow(self.videoFrame.winId())
+        self.newPlayer()  # 实例化 player
 
         # 直播间标题
         self.topLabel = QLabel()
@@ -840,6 +831,21 @@ class VideoWidget(QFrame):
         self.player.play()
         self.moveTimer.start()  # 启动移动弹幕窗的timer
         self.checkPlaying.start(1000)  # 启动播放卡顿检测定时器
+
+    def newPlayer(self):
+        """实例化 player
+        依赖实例化的 vlc （self.instance）
+        """
+        self.player = self.instance.media_player_new()  # 视频播放
+        self.player.video_set_mouse_input(False)
+        self.player.video_set_key_input(False)
+        # 将播放器实例绑定到 VideoFrame: QFrame
+        if platform.system() == 'Windows':
+            self.player.set_hwnd(self.videoFrame.winId())
+        elif platform.system() == 'Darwin':  # for MacOS
+            self.player.set_nsobject(int(self.videoFrame.winId()))
+        else:
+            self.player.set_xwindow(self.videoFrame.winId())
 
     def setTitle(self):
         if self.roomID == '0':
