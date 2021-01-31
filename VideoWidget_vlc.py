@@ -735,6 +735,11 @@ class VideoWidget(QFrame):
         logging.debug(f"{self.name_str}按下暂停/播放键")
 
     def mediaMute(self, force=0, emit=True):
+        logging.info(f"{self.name_str}按下暂停/播放键")
+        logging.debug(f"force={force}, emit={emit}")
+        voice_str = "音量Off" if self.player.audio_get_mute() else "音量On"
+        logging.debug(f"  bgein mute status={voice_str}")
+
         if force == 1:
             self.player.audio_set_mute(False)
             self.volumeButton.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
@@ -747,8 +752,12 @@ class VideoWidget(QFrame):
         else:
             self.player.audio_set_mute(True)
             self.volumeButton.setIcon(self.style().standardIcon(QStyle.SP_MediaVolumeMuted))
+
         if emit:
             self.mutedChanged.emit([self.id, self.player.audio_get_mute()])
+
+        voice_str = "音量Off" if self.player.audio_get_mute() else "音量On"
+        logging.debug(f"  final mute status={voice_str}")
 
     def mediaReload(self):
         self.getMediaURL.recordToken = False  # 设置停止缓存标志位
