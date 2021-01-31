@@ -370,7 +370,7 @@ class VideoWidget(QFrame):
             if self.retryTimes > 10:  # 10秒内未刷新
                 self.mediaReload()  # 彻底刷新
             else:
-                self.player.stop()  # 不完全刷新
+                self.player.pause()  # 不完全刷新
                 self.player.play()
 
     def initTextPos(self):  # 初始化弹幕机位置
