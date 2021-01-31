@@ -942,13 +942,17 @@ class MainWindow(QMainWindow):
                     break
 
 
+# 程序入口点
 if __name__ == '__main__':
+    # 平台相关 patch
     if platform.system() == 'Windows':
         ctypes.windll.kernel32.SetDllDirectoryW(None)
     if getattr(sys, 'frozen', False):
         application_path = os.path.dirname(sys.executable)
     elif __file__:
         application_path = os.path.dirname(__file__)
+
+    # 缓存、日志文件夹初始化
     cachePath = os.path.join(application_path, 'cache')
     logsPath = os.path.join(application_path, 'logs')
     if not os.path.exists(cachePath):  # 启动前初始化cache文件夹
@@ -963,20 +967,21 @@ if __name__ == '__main__':
     cacheFolder = os.path.join(application_path, 'cache/%d' % time.time())  # 初始化缓存文件夹
     os.mkdir(cacheFolder)
 
-    # 主程序注释 + 应用qss
+    # 应用qss
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
     with open(os.path.join(application_path, 'utils/qdark.qss'), 'r') as f:
         qss = f.read()
     app.setStyleSheet(qss)
     app.setFont(QFont('微软雅黑', 9))
-    # 日志采集
+
+    # 日志采集初始化
     log.init_log(application_path)
     sys.excepthook = uncaughtExceptionHandler
     sys.unraisablehook = unraisableExceptionHandler
     threading.excepthook = thraedingExceptionHandler
     loggingSystemInfo()
-
+    # vlc 版本信息log
     import vlc
     vlc_libvlc_env = os.getenv('PYTHON_VLC_LIB_PATH', '')
     vlc_plugin_env = os.getenv('PYTHON_VLC_MODULE_PATH', '')
@@ -994,6 +999,7 @@ if __name__ == '__main__':
     progressText.setText("加载中...")
     progressText.setGeometry(0, 0, 170, 20)
     splash.show()
+
     # 主页面入口
     mainWindow = MainWindow(cacheFolder, progressBar, progressText)
     mainWindow.showMaximized()
