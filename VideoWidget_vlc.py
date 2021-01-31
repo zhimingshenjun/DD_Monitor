@@ -230,8 +230,6 @@ class VideoWidget(QFrame):
                 self.setWindowTitle('%s %s' % (title, id + 1 - 9))
             else:
                 self.setWindowTitle('%s %s' % (title, id + 1))
-        if resize:
-            self.resize(resize[0], resize[1])
 
         layout = QGridLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -276,16 +274,7 @@ class VideoWidget(QFrame):
         layout.addWidget(self.videoFrame, 0, 0, 12, 12)
         # vlc 实例
         self.instance = vlc.Instance()
-        self.player = self.instance.media_player_new()  # 视频播放
-        self.player.video_set_mouse_input(False)
-        self.player.video_set_key_input(False)
-        # 将播放器实例绑定到 VideoFrame: QFrame
-        if platform.system() == 'Windows':
-            self.player.set_hwnd(self.videoFrame.winId())
-        elif platform.system() == 'Darwin':  # for MacOS
-            self.player.set_nsobject(int(self.videoFrame.winId()))
-        else:
-            self.player.set_xwindow(self.videoFrame.winId())
+        self.newPlayer()  # 实例化 player
 
         # 直播间标题
         self.topLabel = QLabel()
@@ -363,6 +352,10 @@ class VideoWidget(QFrame):
         # 检查播放卡住的定时器
         self.checkPlaying = QTimer()
         self.checkPlaying.timeout.connect(self.checkPlayStatus)
+
+        # 最后再 resize 避免有变量尚未初始化
+        if resize:
+            self.resize(resize[0], resize[1])
         logging.info(f"{self.name_str} VLC 播放器构造完毕, 缓存大小: %dkb , 置顶?: %s, 启用弹幕?: %s" % (self.maxCacheSize, self.top, self.startWithDanmu))
 
         self.audioTimer = QTimer()
@@ -829,8 +822,8 @@ class VideoWidget(QFrame):
         self.getMediaURL.recordToken = False  # 设置停止缓存标志位
         self.getMediaURL.checkTimer.stop()
         self.checkPlaying.stop()
-        self.player.pause()
         if self.roomID != '0':
+            self.playerRestart()
             self.setTitle()  # 同时获取最新直播状态
             if self.liveStatus == 1:  # 直播中
                 self.getMediaURL.setConfig(self.roomID, self.quality)  # 设置房号和画质
@@ -843,7 +836,7 @@ class VideoWidget(QFrame):
         self.roomID = '0'
         self.topLabel.setText(('    窗口%s  未定义的直播间' % (self.id + 1))[:20])  # 限制下直播间标题字数
         self.titleLabel.setText('未定义')
-        self.player.stop()
+        self.playerRestart()
         self.play.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         self.deleteMedia.emit(self.id)
         try:
@@ -881,6 +874,41 @@ class VideoWidget(QFrame):
         self.moveTimer.start()  # 启动移动弹幕窗的timer
         self.checkPlaying.start(1000)  # 启动播放卡顿检测定时器
         self.audioTimer.start()  # 检测音量是否正确
+
+    """==== self.player 相关函数 ====
+    + newPlayer()       新实例化一个 self.player。初始化用
+    + playerRestart()   重置 self.player
+    + playerFree()      释放并销毁 playerFree 实例
+    """
+    def newPlayer(self):
+        """实例化 player
+        依赖实例化的 vlc （self.instance）
+        """
+        self.player = self.instance.media_player_new()  # 视频播放
+        self.player.video_set_mouse_input(False)
+        self.player.video_set_key_input(False)
+        # 将播放器实例绑定到 VideoFrame: QFrame
+        if platform.system() == 'Windows':
+            self.player.set_hwnd(self.videoFrame.winId())
+        elif platform.system() == 'Darwin':  # for MacOS
+            self.player.set_nsobject(int(self.videoFrame.winId()))
+        else:
+            self.player.set_xwindow(self.videoFrame.winId())
+
+    def playerRestart(self):
+        """重置 player
+        vlc 实例（self.instance）保持不动
+        """
+        if self.player:
+            self.player.stop()
+        self.newPlayer()
+        # 后续视频流设置由 GetMediaURL 发送 cacheName 信号执行 self.setMedia 完成
+
+    def playerFree(self):
+        """销毁 player 实例。退出主程序前调用"""
+        if self.player:
+            self.player.stop()
+            self.player.release()
 
     def setTitle(self):
         if self.roomID == '0':

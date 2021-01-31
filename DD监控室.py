@@ -430,7 +430,7 @@ class MainWindow(QMainWindow):
             # pass
             self.videoWidgetList[self.videoIndex].mediaReload()
         else:
-            self.videoWidgetList[self.videoIndex].player.stop()
+            self.videoWidgetList[self.videoIndex].playerRestart()
         self.videoIndex += 1
 
     def addMedia(self, info):  # 窗口 房号
@@ -758,12 +758,11 @@ class MainWindow(QMainWindow):
         self.layoutSettingPanel.close()
         self.liverPanel.addLiverRoomWidget.close()
         for videoWidget in self.videoWidgetList:
-            videoWidget.player.stop()
             videoWidget.getMediaURL.recordToken = False  # 关闭缓存并清除
             videoWidget.getMediaURL.checkTimer.stop()
             videoWidget.checkPlaying.stop()
+            videoWidget.close()
         for videoWidget in self.popVideoWidgetList:  # 关闭悬浮窗
-            videoWidget.player.stop()
             videoWidget.getMediaURL.recordToken = False
             videoWidget.getMediaURL.checkTimer.stop()
             videoWidget.checkPlaying.stop()

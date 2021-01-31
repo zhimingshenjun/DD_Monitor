@@ -21,7 +21,7 @@ plugins_dlls = [
     ('audio_mixer', 'libfloat_mixer_plugin'),
 
     ('video_chroma', 'libswscale_plugin'),
-    ('video_output', 'libdirect3d_plugin'),
+    ('video_output', 'libdirect3d11_plugin'),
     ('video_output', 'libdrawable_plugin'),
     ('video_output', 'libdirectdraw_plugin'),
 ]

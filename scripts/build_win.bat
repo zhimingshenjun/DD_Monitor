@@ -1,4 +1,6 @@
 @echo off
+RMDIR /S /Q dist
+RMDIR /S /Q build
 pyinstaller --clean --noconfirm DDMonitor.spec
 mkdir dist\DDMonitor\logs
 copy utils\config_default.json dist\DDMonitor\utils\config.json
