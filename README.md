@@ -25,7 +25,7 @@
 
    pip安装
 
-   ```
+   ```bash
    pip install -r requirements.txt
    ```
 

@@ -1,0 +1,67 @@
+name: DDMonitor Build
+
+on: [push, pull_request]
+
+jobs:
+  build-linux:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Update pip
+      run: python -m pip install --upgrade pip
+    - name: Install Packages
+      run: pip install -r requirements.txt
+    - name: Build
+      run: "scripts/build_linux.sh"
+  
+  build-windows:
+
+    runs-on: windows-latest
+    env:
+     PYTHON_VLC_MODULE_PATH: ${{github.workspace}}\\vlc-3.0.12
+     PYTHON_VLC_LIB_PATH: ${{github.workspace}}\\vlc-3.0.12\\libvlc.dll
+    steps:
+    - uses: actions/checkout@v2
+    - uses: suisei-cn/actions-download-file@v1
+      id: downloadVLC
+      name: Download VLC
+      with:
+        url: "https://download.videolan.org/pub/videolan/vlc/last/win64/vlc-3.0.12-win64.zip"
+        target: .
+    - name: Extract VLC
+      run: |
+        powershell.exe Expand-Archive -Path vlc-3.0.12-win64.zip -DestinationPath .
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Update pip
+      run: python -m pip install --upgrade pip
+    - name: Install Packages
+      run: pip install -r requirements.txt
+    - name: Build
+      run: "scripts/build_win.bat"
+    
+  build-macos:
+
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+    - name: Update pip
+      run: python -m pip install --upgrade pip
+    - name: Install Packages
+      run: pip install -r requirements.txt
+    - name: Build
+      run: "scripts/build_macos.sh"
+  

@@ -13,10 +13,12 @@ import vlc
 import platform
 import logging
 
+
 header = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36',
     'Referer': 'https://live.bilibili.com'
 }
+
 
 class PushButton(QPushButton):
     def __init__(self, icon='', text=''):
@@ -166,8 +168,8 @@ class ExportTip(QWidget):
 
 
 class VideoWidget(QFrame):
-    mutedChanged = pyqtSignal(list)
-    volumeChanged = pyqtSignal(list)
+    mutedChanged = pyqtSignal(list)  # 按下静音按钮
+    volumeChanged = pyqtSignal(list)  # 音量滑条改变
     addMedia = pyqtSignal(list)  # 发送新增的直播
     deleteMedia = pyqtSignal(int)  # 删除选中的直播
     exchangeMedia = pyqtSignal(list)  # 交换播放窗口
@@ -204,6 +206,8 @@ class VideoWidget(QFrame):
         self.cacheName = ''
         self.maxCacheSize = maxCacheSize
         self.startWithDanmu = startWithDanmu
+
+        # 容器设置
         self.setFrameShape(QFrame.Box)
         self.setObjectName('video')
 
@@ -227,9 +231,11 @@ class VideoWidget(QFrame):
                 self.setWindowTitle('%s %s' % (title, id + 1))
         if resize:
             self.resize(resize[0], resize[1])
+
         layout = QGridLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
+        # ---- 弹幕机 ----
         self.textBrowser = TextBrowser(self)  # 必须赶在resizeEvent和moveEvent之前初始化textbrowser
         self.setDanmuOpacity(self.textSetting[1])  # 设置弹幕透明度
         self.textBrowser.optionWidget.opacitySlider.setValue(self.textSetting[1])  # 设置选项页透明条
@@ -260,15 +266,19 @@ class VideoWidget(QFrame):
         self.deltaX = 0
         self.deltaY = 0
 
+        # ---- 播放器布局设置 ----
+        # 播放器
         self.videoFrame = VideoFrame()  # 新版本vlc内核播放器
         self.videoFrame.rightClicked.connect(self.rightMouseClicked)
         self.videoFrame.leftClicked.connect(self.leftMouseClicked)
         self.videoFrame.doubleClicked.connect(self.doubleClick)
         layout.addWidget(self.videoFrame, 0, 0, 12, 12)
+        # vlc 实例
         self.instance = vlc.Instance()
         self.player = self.instance.media_player_new()  # 视频播放
         self.player.video_set_mouse_input(False)
         self.player.video_set_key_input(False)
+        # 将播放器实例绑定到 VideoFrame: QFrame
         if platform.system() == 'Windows':
             self.player.set_hwnd(self.videoFrame.winId())
         elif platform.system() == 'Darwin':  # for MacOS
@@ -276,6 +286,7 @@ class VideoWidget(QFrame):
         else:
             self.player.set_xwindow(self.videoFrame.winId())
 
+        # 直播间标题
         self.topLabel = QLabel()
         self.topLabel.setFixedHeight(30)
         # self.topLabel.setAlignment(Qt.AlignCenter)
@@ -286,6 +297,7 @@ class VideoWidget(QFrame):
         layout.addWidget(self.topLabel, 0, 0, 1, 12)
         self.topLabel.hide()
 
+        # 控制栏容器
         self.frame = QWidget()
         self.frame.setObjectName('frame')
         self.frame.setStyleSheet("background-color:#293038")
@@ -295,46 +307,60 @@ class VideoWidget(QFrame):
         layout.addWidget(self.frame, 11, 0, 1, 12)
         self.frame.hide()
 
+        # ---- 嵌入式播放器 控制栏 ----
+        # 主播名
         self.titleLabel = QLabel()
         self.titleLabel.setMaximumWidth(150)
         self.titleLabel.setStyleSheet('background-color:#00000000')
         self.setTitle()
         frameLayout.addWidget(self.titleLabel)
+        # 播放/暂停
         self.play = PushButton(self.style().standardIcon(QStyle.SP_MediaPause))
         self.play.clicked.connect(self.mediaPlay)
         frameLayout.addWidget(self.play)
+        # 刷新
         self.reload = PushButton(self.style().standardIcon(QStyle.SP_BrowserReload))
         self.reload.clicked.connect(self.mediaReload)
         frameLayout.addWidget(self.reload)
+        # 音量开关
         self.volumeButton = PushButton(self.style().standardIcon(QStyle.SP_MediaVolume))
         self.volumeButton.clicked.connect(self.mediaMute)
         frameLayout.addWidget(self.volumeButton)
+        # 音量滑条
         self.slider = Slider()
         self.slider.setStyleSheet('background-color:#00000000')
         self.slider.value.connect(self.setVolume)
         frameLayout.addWidget(self.slider)
+        # 弹幕开关
         self.danmuButton = PushButton(text='弹')
         self.danmuButton.clicked.connect(self.showDanmu)
         frameLayout.addWidget(self.danmuButton)
+        # 关闭窗口
         self.stop = PushButton(self.style().standardIcon(QStyle.SP_DialogCancelButton))
         self.stop.clicked.connect(self.mediaStop)
         frameLayout.addWidget(self.stop)
 
+        # ---- IO 交互设置 ----
+        # 单开线程获取视频流
         self.getMediaURL = GetMediaURL(self.id, cacheFolder, maxCacheSize)
         self.getMediaURL.cacheName.connect(self.setMedia)
         self.getMediaURL.downloadError.connect(self.mediaReload)
 
         self.danmu = remoteThread(self.roomID)
 
+        # 导出配置
         self.exportCache = ExportCache()
         self.exportCache.finish.connect(self.exportFinish)
         self.exportTip = ExportTip()
 
+        # ---- 定时器 ----
+        # 弹幕机位置匹配
         self.moveTimer = QTimer()
         self.moveTimer.timeout.connect(self.initTextPos)
         self.moveTimer.start(50)
 
-        self.checkPlaying = QTimer()  # 检查播放卡住的定时器
+        # 检查播放卡住的定时器
+        self.checkPlaying = QTimer()
         self.checkPlaying.timeout.connect(self.checkPlayStatus)
         logging.info(f"{self.name_str} VLC 播放器构造完毕, 缓存大小: %dkb , 置顶?: %s, 启用弹幕?: %s" % (self.maxCacheSize, self.top, self.startWithDanmu))
 
@@ -344,7 +370,7 @@ class VideoWidget(QFrame):
             if self.retryTimes > 10:  # 10秒内未刷新
                 self.mediaReload()  # 彻底刷新
             else:
-                self.player.stop()  # 不完全刷新
+                self.player.pause()  # 不完全刷新
                 self.player.play()
 
     def initTextPos(self):  # 初始化弹幕机位置
@@ -735,6 +761,11 @@ class VideoWidget(QFrame):
         logging.debug(f"{self.name_str}按下暂停/播放键")
 
     def mediaMute(self, force=0, emit=True):
+        logging.debug(f"{self.name_str}按下音量开关键")
+        logging.debug(f"  force={force}, emit={emit}")
+        voice_str = "音量Off" if self.player.audio_get_mute() else "音量On"
+        logging.debug(f"  bgein mute status={voice_str}")
+
         if force == 1:
             self.player.audio_set_mute(False)
             self.volumeButton.setIcon(self.style().standardIcon(QStyle.SP_MediaVolume))
@@ -747,14 +778,18 @@ class VideoWidget(QFrame):
         else:
             self.player.audio_set_mute(True)
             self.volumeButton.setIcon(self.style().standardIcon(QStyle.SP_MediaVolumeMuted))
+
         if emit:
             self.mutedChanged.emit([self.id, self.player.audio_get_mute()])
+
+        voice_str = "音量Off" if self.player.audio_get_mute() else "音量On"
+        logging.debug(f"  final mute status={voice_str}")
 
     def mediaReload(self):
         self.getMediaURL.recordToken = False  # 设置停止缓存标志位
         self.getMediaURL.checkTimer.stop()
         self.checkPlaying.stop()
-        self.player.stop()
+        self.player.pause()
         if self.roomID != '0':
             self.setTitle()  # 同时获取最新直播状态
             if self.liveStatus == 1:  # 直播中
