@@ -514,7 +514,9 @@ class AddLiverRoomWidget(QWidget):
         self.followLiverList = []
         layout = QGridLayout(self)
         layout.addWidget(QLabel('请输入B站直播间房号 多个房号之间用空格隔开'), 0, 0, 1, 4)
+        self.roomEditText = ''
         self.roomEdit = QLineEdit()
+        self.roomEdit.textChanged.connect(self.editChange)
         layout.addWidget(self.roomEdit, 1, 0, 1, 5)
         confirm = QPushButton('完成')
         confirm.setFixedHeight(28)
@@ -638,6 +640,31 @@ class AddLiverRoomWidget(QWidget):
         tab.addTab(hotLiverPage, '正在直播')
         tab.addTab(hacoPage, '个人势/箱')
         tab.addTab(followsPage, '关注添加')
+
+    def editChange(self):  # 提取输入文本中的数字
+        if len(self.roomEdit.text()) > len(self.roomEditText):
+            roomEditText = ''
+            roomIDList = self.roomEdit.text().split(' ')
+            for roomID in roomIDList:
+                strList = map(lambda x: x if x.isdigit() else '', roomID)
+                roomID = ''
+                digitToken = False
+                for s in strList:
+                    if s:
+                        roomID += s
+                        digitToken = True
+                    elif digitToken:
+                        roomID += ' '
+                        if roomID not in roomEditText:
+                            roomEditText += roomID
+                        roomID = ''
+                        digitToken = False
+                if roomID:
+                    roomID += ' '
+                    if roomID not in roomEditText:
+                        roomEditText += roomID
+            self.roomEdit.setText(roomEditText)
+            self.roomEditText = roomEditText
 
     def closeEvent(self, event):
         if self.getHotLiver.isRunning():

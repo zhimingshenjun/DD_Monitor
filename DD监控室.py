@@ -138,10 +138,13 @@ class CheckDanmmuProvider(QThread):
         super(CheckDanmmuProvider,self).__init__()
     
     def run(self):
-        anwsers = dns.resolver.resolve('broadcastlv.chat.bilibili.com', 'A')
-        danmu_ip = anwsers[0].to_text()
-        logging.info("弹幕IP: %s" % danmu_ip)
-
+        try:
+            anwsers = dns.resolver.resolve('broadcastlv.chat.bilibili.com', 'A')
+            danmu_ip = anwsers[0].to_text()
+            logging.info("弹幕IP: %s" % danmu_ip)
+        except Exception as e:
+            logging.error("解析弹幕域名失败")
+            logging.error(str(e))
 
 class MainWindow(QMainWindow):
     def __init__(self, cacheFolder, progressBar, progressText):
