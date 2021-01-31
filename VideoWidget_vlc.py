@@ -229,8 +229,6 @@ class VideoWidget(QFrame):
                 self.setWindowTitle('%s %s' % (title, id + 1 - 9))
             else:
                 self.setWindowTitle('%s %s' % (title, id + 1))
-        if resize:
-            self.resize(resize[0], resize[1])
 
         layout = QGridLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -353,6 +351,10 @@ class VideoWidget(QFrame):
         # 检查播放卡住的定时器
         self.checkPlaying = QTimer()
         self.checkPlaying.timeout.connect(self.checkPlayStatus)
+
+        # 最后再 resize 避免有变量尚未初始化
+        if resize:
+            self.resize(resize[0], resize[1])
         logging.info(f"{self.name_str} VLC 播放器构造完毕, 缓存大小: %dkb , 置顶?: %s, 启用弹幕?: %s" % (self.maxCacheSize, self.top, self.startWithDanmu))
 
     def checkPlayStatus(self):  # 播放卡住了
