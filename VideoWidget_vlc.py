@@ -873,9 +873,9 @@ class VideoWidget(QFrame):
             self.danmu.start()
             self.textBrowser.show()
         if self.hardwareDecode:
-            self.media = self.instance.media_new(cacheName, 'avcodec-hw=dxva2')  # 设置vlc并硬解播放
+            self.media = self.instance.media_new(cacheName, 'avcodec-hw=any')  # 设置vlc并硬解播放
         else:
-            self.media = self.instance.media_new(cacheName)  # 软解
+            self.media = self.instance.media_new(cacheName, 'avcodec-hw=none')  # 软解
         self.player.set_media(self.media)  # 设置视频
         self.player.audio_set_channel(self.audioChannel)
         self.player.play()

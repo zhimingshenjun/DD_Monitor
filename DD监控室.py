@@ -841,7 +841,8 @@ class MainWindow(QMainWindow):
             if os.path.getsize(jsonPath):
                 config = {}
                 try:
-                    config = json.loads(open(jsonPath).read())
+                    with codecs.open(jsonPath, 'r', encoding='utf-8') as f:
+                        config = json.loads(f.read())
                 except:
                     logging.exception('json 配置导入失败')
                     config = {}
