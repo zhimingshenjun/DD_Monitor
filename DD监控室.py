@@ -53,7 +53,7 @@ class ScrollArea(QScrollArea):
         self.horizontalScrollBar().setVisible(False)
 
     def sizeHint(self):
-        return QSize(100, 181)
+        return QSize(100, 100)
 
     def mouseReleaseEvent(self, QMouseEvent):
         if QMouseEvent.button() == Qt.RightButton:
