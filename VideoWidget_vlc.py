@@ -59,9 +59,10 @@ class Slider(QSlider):
 
 class GetMediaURL(QThread):
     cacheName = pyqtSignal(str)
+    copyFile = pyqtSignal(str)
     downloadError = pyqtSignal()
 
-    def __init__(self, id, cacheFolder, maxCacheSize):
+    def __init__(self, id, cacheFolder, maxCacheSize, saveCachePath):
         super(GetMediaURL, self).__init__()
         self.id = id
         self.cacheFolder = cacheFolder
@@ -70,6 +71,7 @@ class GetMediaURL(QThread):
         self.quality = 250
         self.downloadToken = False
         self.maxCacheSize = maxCacheSize
+        self.saveCachePath = saveCachePath
         self.checkTimer = QTimer()
         self.checkTimer.timeout.connect(self.checkDownlods)
 
@@ -116,7 +118,19 @@ class GetMediaURL(QThread):
                     elif contentCnt == 100:
                         self.cacheName.emit(fileName)
             self.cacheVideo.close()
-            os.remove(fileName)  # 清除缓存
+            while True:
+                try:
+                    if self.saveCachePath and os.path.exists(self.saveCachePath):  # 如果备份路径有效
+                        formatTime = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time()))
+                        renameFile = '%s/%s.flv' % (self.cacheFolder, formatTime)
+                        os.rename(fileName, renameFile)
+                        self.copyFile.emit(renameFile)  # 发射信号备份缓存
+                    else:
+                        os.remove(fileName)  # 清除缓存
+                    # os.remove(fileName)
+                    break
+                except:
+                    time.sleep(0.05)
         except:
             logging.exception('直播地址获取失败 / 缓存视频出错')
 
@@ -147,14 +161,19 @@ class ExportCache(QThread):
         super(ExportCache, self).__init__()
         self.ori = ''
         self.dst = ''
+        self.cut = False
 
     def setArgs(self, ori, dst):
         self.ori, self.dst = ori, dst
 
     def run(self):
         try:
-            shutil.copy(self.ori, self.dst)
-            self.finish.emit([True, self.dst])  # 导出成功
+            if self.cut:
+                shutil.move(self.ori, self.dst)
+                self.cut = False
+            else:
+                shutil.copy(self.ori, self.dst)
+                self.finish.emit([True, self.dst])  # 导出成功
         except:
             logging.exception('导出缓存失败')
             self.finish.emit([False, self.dst])
@@ -184,13 +203,16 @@ class VideoWidget(QFrame):
     closePopWindow = pyqtSignal(list)  # 关闭悬浮窗
 
     def __init__(self, id, volume, cacheFolder, top=False, title='', resize=[],
-                 textSetting=[True, 20, 2, 6, 0, '【 [ {', 10], maxCacheSize=2048000, startWithDanmu=True):
+                 textSetting=[True, 20, 2, 6, 0, '【 [ {', 10], maxCacheSize=2048000,
+                 saveCachePath='', startWithDanmu=True):
         super(VideoWidget, self).__init__()
         self.setAcceptDrops(True)
         self.installEventFilter(self)
         self.id = id
-        self.title = '未定义的直播间'
-        self.uname = '未定义'
+        self.title = ''
+        self.uname = ''
+        self.oldTitle = ''
+        self.oldUname = ''
         self.hoverToken = False
         self.roomID = '0'  # 初始化直播间房号
         self.liveStatus = 0  # 初始化直播状态为0
@@ -207,6 +229,7 @@ class VideoWidget(QFrame):
         self.userPause = False  # 用户暂停
         self.cacheName = ''
         self.maxCacheSize = maxCacheSize
+        self.saveCachePath = saveCachePath
         self.startWithDanmu = startWithDanmu
 
         # 容器设置
@@ -333,8 +356,9 @@ class VideoWidget(QFrame):
 
         # ---- IO 交互设置 ----
         # 单开线程获取视频流
-        self.getMediaURL = GetMediaURL(self.id, cacheFolder, maxCacheSize)
+        self.getMediaURL = GetMediaURL(self.id, cacheFolder, maxCacheSize, saveCachePath)
         self.getMediaURL.cacheName.connect(self.setMedia)
+        self.getMediaURL.copyFile.connect(self.copyCache)
         self.getMediaURL.downloadError.connect(self.mediaReload)
 
         self.danmu = remoteThread(self.roomID)
@@ -357,7 +381,8 @@ class VideoWidget(QFrame):
         # 最后再 resize 避免有变量尚未初始化
         if resize:
             self.resize(resize[0], resize[1])
-        logging.info(f"{self.name_str} VLC 播放器构造完毕, 缓存大小: %dkb , 置顶?: %s, 启用弹幕?: %s" % (self.maxCacheSize, self.top, self.startWithDanmu))
+        logging.info(f"{self.name_str} VLC 播放器构造完毕, 缓存大小: %dkb, 缓存路径: %s, 置顶?: %s, 启用弹幕?: %s" %
+                     (self.maxCacheSize, self.saveCachePath, self.top, self.startWithDanmu))
 
         self.audioTimer = QTimer()
         self.audioTimer.timeout.connect(self.checkAudio)
@@ -839,6 +864,7 @@ class VideoWidget(QFrame):
             self.mediaStop()
 
     def mediaStop(self):
+        self.oldTitle, self.oldUname = '', ''
         self.roomID = '0'
         self.topLabel.setText(('    窗口%s  未定义的直播间' % (self.id + 1))[:20])  # 限制下直播间标题字数
         self.titleLabel.setText('未定义')
@@ -877,9 +903,17 @@ class VideoWidget(QFrame):
         self.player.set_media(self.media)  # 设置视频
         self.player.audio_set_channel(self.audioChannel)
         self.player.play()
-        self.moveTimer.start()  # 启动移动弹幕窗的timer
+        # self.moveTimer.start()  # 启动移动弹幕窗的timer
         self.checkPlaying.start(1000)  # 启动播放卡顿检测定时器
         self.audioTimer.start()  # 检测音量是否正确
+
+    def copyCache(self, copyFile):
+        fileName = os.path.split(copyFile)[1]
+        title = self.oldTitle if self.oldTitle else self.title
+        uname = self.oldUname if self.oldUname else self.uname
+        self.exportCache.setArgs(copyFile, '%s/%s_%s_%s' % (self.saveCachePath, uname, title, fileName))
+        self.exportCache.cut = True  # 设置为剪切
+        self.exportCache.start()
 
     """==== self.player 相关函数 ====
     + newPlayer()       新实例化一个 self.player。初始化用
@@ -917,6 +951,10 @@ class VideoWidget(QFrame):
             self.player.release()
 
     def setTitle(self):
+        if self.title != '未定义的直播间':
+            self.oldTitle = self.title
+        if self.uname != '未定义':
+            self.oldUname = self.uname
         if self.roomID == '0':
             self.title = '未定义的直播间'
             self.uname = '未定义'

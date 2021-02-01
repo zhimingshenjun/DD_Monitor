@@ -906,6 +906,7 @@ class LiverPanel(QWidget):
                     r = requests.get('https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=%s' % roomID)
                     data = json.loads(r.text)['data']
                     roomID = data['room_info']['room_id']
+                    # print(roomID)
                 except:
                     logging.exception('房间号查询失败')
             if roomID not in self.roomIDDict:

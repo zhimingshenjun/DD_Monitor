@@ -71,6 +71,40 @@ class ScrollArea(QScrollArea):
 #         self.setWindowTitle(title)
 
 
+class CacheSetting(QWidget):
+    setting = pyqtSignal(list)
+
+    def __init__(self):
+        super(CacheSetting, self).__init__()
+        self.resize(400, 200)
+        self.setWindowTitle('缓存设置')
+        layout = QGridLayout(self)
+        layout.addWidget(QLabel('最大缓存(GB)'), 0, 0, 1, 1)
+        self.maxCacheEdit = QLineEdit()
+        self.maxCacheEdit.setValidator(QIntValidator(1, 9))
+        layout.addWidget(self.maxCacheEdit, 0, 1, 1, 3)
+        layout.addWidget(QLabel('缓存自动备份至以上路径 (若不填则默认删除)'), 2, 0, 1, 3)
+        selectButton = QPushButton('备份路径')
+        selectButton.setStyleSheet('background-color:#31363b;border-width:1px')
+        selectButton.clicked.connect(self.selectCopyPath)
+        layout.addWidget(selectButton, 1, 0, 1, 1)
+        self.savePathEdit = QLineEdit()
+        layout.addWidget(self.savePathEdit, 1, 1, 1, 3)
+        okButton = QPushButton('OK')
+        okButton.setStyleSheet('background-color:#3daee9;border-width:1px')
+        okButton.clicked.connect(self.sendSetting)
+        layout.addWidget(okButton, 2, 3, 1, 1)
+
+    def selectCopyPath(self):
+        savePath = QFileDialog.getExistingDirectory(self, "选择备份缓存路径", None, QFileDialog.ShowDirsOnly)
+        if savePath:
+            self.savePathEdit.setText(savePath)
+
+    def sendSetting(self):
+        self.setting.emit([self.maxCacheEdit.text(), self.savePathEdit.text()])
+        self.hide()
+
+
 class Version(QWidget):
     def __init__(self):
         super(Version, self).__init__()
@@ -203,6 +237,9 @@ class MainWindow(QMainWindow):
             if 'maxCacheSize' not in self.config:
                 self.config['maxCacheSize'] = 2048000
                 logging.warning('最大缓存没有被设置，使用默认1G')
+            if 'saveCachePath' not in self.config:
+                self.config['saveCachePath'] = ''
+                logging.warning('默认缓存备份路径为空 即自动清空')
             if 'startWithDanmu' not in self.config:
                 self.config['startWithDanmu'] = True
                 logging.warning('启动时加载弹幕没有被设置，默认加载')
@@ -223,6 +260,7 @@ class MainWindow(QMainWindow):
                 'control': True,
                 'hardwareDecode': True,
                 'maxCacheSize': 2048000,
+                'saveCachePath': '',
                 'startWithDanmu': True
             }
         self.dumpConfig = DumpConfig(self.config)
@@ -237,6 +275,10 @@ class MainWindow(QMainWindow):
         self.layoutSettingPanel = LayoutSettingPanel()
         self.layoutSettingPanel.layoutConfig.connect(self.changeLayout)
         self.version = Version()
+        self.cacheSetting = CacheSetting()
+        self.cacheSetting.maxCacheEdit.setText(str(self.config['maxCacheSize'] // 1024000))
+        self.cacheSetting.savePathEdit.setText(self.config['saveCachePath'])
+        self.cacheSetting.setting.connect(self.setCache)
         self.hotKey = HotKey()
         self.pay = pay()
 
@@ -249,6 +291,7 @@ class MainWindow(QMainWindow):
             progressText.setText('设置第%s个主层播放器...' % str(i + 1))
             self.videoWidgetList.append(VideoWidget(i, volume, cacheFolder, textSetting=self.config['danmu'][i],
                                                     maxCacheSize = self.config['maxCacheSize'],
+                                                    saveCachePath = self.config['saveCachePath'],
                                                     startWithDanmu=self.config['startWithDanmu']))
             vlcProgressCounter += 1
             progressBar.setValue(vlcProgressCounter)
@@ -271,6 +314,7 @@ class MainWindow(QMainWindow):
             self.videoWidgetList[i].audioChannel = self.config['audioChannel'][i]
             self.popVideoWidgetList.append(VideoWidget(i + 9, volume, cacheFolder, True, '悬浮窗', [1280, 720],
                                                        maxCacheSize=self.config['maxCacheSize'],
+                                                       saveCachePath = self.config['saveCachePath'],
                                                        startWithDanmu=self.config['startWithDanmu']))
             self.popVideoWidgetList[i].closePopWindow.connect(self.closePopWindow)
             vlcProgressCounter += 1
@@ -384,7 +428,7 @@ class MainWindow(QMainWindow):
         hardDecodeMenu.addAction(hardDecodeAction)
         softDecodeAction = QAction('软解', self, triggered=lambda: self.setDecode(False))
         hardDecodeMenu.addAction(softDecodeAction)
-        cacheSizeSetting = QAction('最大缓存设置', self, triggered=self.openCacheSizeSetting)
+        cacheSizeSetting = QAction('缓存设置', self, triggered=self.openCacheSetting)
         self.optionMenu.addAction(cacheSizeSetting)
         startWithDanmuSetting = QAction('自动加载弹幕设置', self, triggered=self.openStartWithDanmuSetting)
         self.optionMenu.addAction(startWithDanmuSetting)
@@ -706,16 +750,25 @@ class MainWindow(QMainWindow):
     def openDDThanks(self):
         QDesktopServices.openUrl(QUrl(r'https://www.bilibili.com/video/BV1Di4y1L7T2'))
 
-    def openCacheSizeSetting(self):
-        userInputCache, okPressed = QInputDialog.getInt(self,"设置最大缓存大小","最大缓存(GB)",
-            int(float(self.config['maxCacheSize']) / (10 ** 6)), 1, 4, 1)
-        if okPressed:
-            self.config['maxCacheSize'] = int(userInputCache * 10 ** 6)
-            self.dumpConfig.start()
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Information)
-            msg.setText("缓存大小设置成功，重启监控室后生效。")
-            msg.exec()
+    def openCacheSetting(self):
+        self.cacheSetting.hide()
+        self.cacheSetting.show()
+        # userInputCache, okPressed = QInputDialog.getInt(self,"设置最大缓存大小","最大缓存(GB)",
+        #     int(float(self.config['maxCacheSize']) / (10 ** 6)), 1, 4, 1)
+        # if okPressed:
+        #     self.config['maxCacheSize'] = int(userInputCache * 10 ** 6)
+        #     self.dumpConfig.start()
+        #     msg = QMessageBox()
+        #     msg.setIcon(QMessageBox.Information)
+        #     msg.setText("缓存大小设置成功，重启监控室后生效。")
+        #     msg.exec()
+
+    def setCache(self, setting):
+        maxCache, savePath = setting
+        self.config['maxCacheSize'] = int(maxCache) * 1024000
+        self.config['saveCachePath'] = savePath
+        self.dumpConfig.start()
+        QMessageBox.information(self, '缓存设置更改', '设置成功 重启监控室后生效', QMessageBox.Ok)
 
     def openStartWithDanmuSetting(self):
         items = ('加载(推荐，默认。但可能增加网络压力，可能会被限流。)', '不加载')
@@ -787,11 +840,13 @@ class MainWindow(QMainWindow):
             videoWidget.getMediaURL.recordToken = False  # 关闭缓存并清除
             videoWidget.getMediaURL.checkTimer.stop()
             videoWidget.checkPlaying.stop()
+            videoWidget.mediaStop()
             videoWidget.close()
         for videoWidget in self.popVideoWidgetList:  # 关闭悬浮窗
             videoWidget.getMediaURL.recordToken = False
             videoWidget.getMediaURL.checkTimer.stop()
             videoWidget.checkPlaying.stop()
+            videoWidget.mediaStop()
             videoWidget.close()
         self.dumpConfig.start()
 
