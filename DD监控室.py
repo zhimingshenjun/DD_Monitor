@@ -31,16 +31,20 @@ application_path = ""
 def _translate(context, text, disambig):
     return QApplication.translate(context, text, disambig)
 
+
 class ControlWidget(QWidget):
+    heightValue = pyqtSignal(int)
+
     def __init__(self):
         super(ControlWidget, self).__init__()
 
-    def sizeHint(self):
-        return QSize(100, 100)
+    def resizeEvent(self, QResizeEvent):
+        self.heightValue.emit(self.height())
 
 
 class ScrollArea(QScrollArea):
     multipleTimes = pyqtSignal(int)
+    addLiver = pyqtSignal()
 
     def __init__(self):
         super(ScrollArea, self).__init__()
@@ -48,7 +52,15 @@ class ScrollArea(QScrollArea):
         self.horizontalScrollBar().setVisible(False)
 
     def sizeHint(self):
-        return QSize(100, 100)
+        return QSize(100, 181)
+
+    def mouseReleaseEvent(self, QMouseEvent):
+        if QMouseEvent.button() == Qt.RightButton:
+            menu = QMenu()
+            addLiver = menu.addAction('添加直播间')
+            action = menu.exec_(self.mapToGlobal(QMouseEvent.pos()))
+            if action == addLiver:
+                self.addLiver.emit()
 
     def wheelEvent(self, QEvent):
         if QEvent.angleDelta().y() < 0:
@@ -330,9 +342,10 @@ class MainWindow(QMainWindow):
         self.controlDock.setFloating(False)
         self.controlDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea | Qt.TopDockWidgetArea)
         self.addDockWidget(Qt.TopDockWidgetArea, self.controlDock)
-        controlWidget = ControlWidget()
-        self.controlDock.setWidget(controlWidget)
-        self.controlBarLayout = QGridLayout(controlWidget)
+        self.controlWidget = ControlWidget()
+        self.controlWidget.heightValue.connect(self.showAddButton)
+        self.controlDock.setWidget(self.controlWidget)
+        self.controlBarLayout = QGridLayout(self.controlWidget)
         self.globalPlayToken = True
         self.play = PushButton(self.style().standardIcon(QStyle.SP_MediaPause))
         self.play.clicked.connect(self.globalMediaPlay)
@@ -400,6 +413,7 @@ class MainWindow(QMainWindow):
         self.liverPanel.refreshIDList.connect(self.refreshPlayerStatus)  # 刷新播放器
         self.scrollArea.setWidget(self.liverPanel)
         self.scrollArea.multipleTimes.connect(self.changeLiverPanelLayout)
+        self.scrollArea.addLiver.connect(self.liverPanel.openLiverRoomPanel)
         self.addButton.clicked.connect(self.liverPanel.openLiverRoomPanel)
         self.liverPanel.updatePlayingStatus(self.config['player'])
         progressText.setText('设置主播选择控制...')
@@ -547,6 +561,12 @@ class MainWindow(QMainWindow):
 
     def setDanmu(self):
         self.dumpConfig.start()
+
+    def showAddButton(self, height):
+        if height < 181:
+            self.addButton.hide()
+        else:
+            self.addButton.show()
 
     def setTranslator(self, info):
         id, token = info  # 窗口 同传显示布尔值
