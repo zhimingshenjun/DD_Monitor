@@ -204,7 +204,7 @@ class VideoWidget(QFrame):
 
     def __init__(self, id, volume, cacheFolder, top=False, title='', resize=[],
                  textSetting=[True, 20, 2, 6, 0, '【 [ {', 10], maxCacheSize=2048000,
-                 saveCachePath='', startWithDanmu=True):
+                 saveCachePath='', startWithDanmu=True, hardwareDecode=True):
         super(VideoWidget, self).__init__()
         self.setAcceptDrops(True)
         self.installEventFilter(self)
@@ -222,7 +222,7 @@ class VideoWidget(QFrame):
         self.volume = volume
         self.volumeAmplify = 1.0  # 音量加倍
         self.muted = False
-        self.hardwareDecode = True
+        self.hardwareDecode = hardwareDecode
         self.leftButtonPress = False
         self.rightButtonPress = False
         self.fullScreen = False
@@ -863,14 +863,15 @@ class VideoWidget(QFrame):
         else:
             self.mediaStop()
 
-    def mediaStop(self):
+    def mediaStop(self, deleteMedia=True):
         self.oldTitle, self.oldUname = '', ''
         self.roomID = '0'
         self.topLabel.setText(('    窗口%s  未定义的直播间' % (self.id + 1))[:20])  # 限制下直播间标题字数
         self.titleLabel.setText('未定义')
         self.playerRestart()
         self.play.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
-        self.deleteMedia.emit(self.id)
+        if deleteMedia:
+            self.deleteMedia.emit(self.id)
         try:
             self.danmu.message.disconnect(self.playDanmu)
         except:
@@ -899,7 +900,7 @@ class VideoWidget(QFrame):
         if self.hardwareDecode:
             self.media = self.instance.media_new(cacheName, 'avcodec-hw=any')  # 设置vlc并硬解播放
         else:
-            self.media = self.instance.media_new(cacheName, 'avcodec-hw=none')  # 软解
+            self.media = self.instance.media_new(cacheName, 'avcodec-hw=none')  # 软解  vlc3.0似乎不起作用?
         self.player.set_media(self.media)  # 设置视频
         self.player.audio_set_channel(self.audioChannel)
         self.player.play()

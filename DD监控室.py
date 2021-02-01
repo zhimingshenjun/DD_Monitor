@@ -309,7 +309,8 @@ class MainWindow(QMainWindow):
             self.videoWidgetList.append(VideoWidget(i, volume, cacheFolder, textSetting=self.config['danmu'][i],
                                                     maxCacheSize = self.config['maxCacheSize'],
                                                     saveCachePath = self.config['saveCachePath'],
-                                                    startWithDanmu=self.config['startWithDanmu']))
+                                                    startWithDanmu=self.config['startWithDanmu'],
+                                                    hardwareDecode=self.config['hardwareDecode']))
             vlcProgressCounter += 1
             progressBar.setValue(vlcProgressCounter)
             self.videoWidgetList[i].mutedChanged.connect(self.mutedChanged)
@@ -332,7 +333,8 @@ class MainWindow(QMainWindow):
             self.popVideoWidgetList.append(VideoWidget(i + 9, volume, cacheFolder, True, '悬浮窗', [1280, 720],
                                                        maxCacheSize=self.config['maxCacheSize'],
                                                        saveCachePath = self.config['saveCachePath'],
-                                                       startWithDanmu=self.config['startWithDanmu']))
+                                                       startWithDanmu=self.config['startWithDanmu'],
+                                                       hardwareDecode=self.config['hardwareDecode']))
             self.popVideoWidgetList[i].closePopWindow.connect(self.closePopWindow)
             vlcProgressCounter += 1
             progressBar.setValue(vlcProgressCounter)
@@ -730,7 +732,7 @@ class MainWindow(QMainWindow):
             videoWidget.setDanmu.emit()
 
     def globalQuality(self, quality):
-        for videoWidget in self.videoWidgetList:
+        for videoWidget in self.videoWidgetList + self.popVideoWidgetList:
             if not videoWidget.isHidden():  # 窗口没有被隐藏
                 videoWidget.quality = quality
                 videoWidget.mediaReload()
@@ -738,14 +740,14 @@ class MainWindow(QMainWindow):
         self.dumpConfig.start()
 
     def globalAudioChannel(self, audioChannel):
-        for videoWidget in self.videoWidgetList:
+        for videoWidget in self.videoWidgetList + self.popVideoWidgetList:
             videoWidget.audioChannel = audioChannel
             videoWidget.player.audio_set_channel(audioChannel)
         self.config['audioChannel'] = [audioChannel] * 9
         # self.dumpConfig.start()
 
     def setDecode(self, hardwareDecodeToken):
-        for videoWidget in self.videoWidgetList:
+        for videoWidget in self.videoWidgetList + self.popVideoWidgetList:
             videoWidget.hardwareDecode = hardwareDecodeToken
         self.globalMediaReload()
         self.config['hardwareDecode'] = hardwareDecodeToken
@@ -867,17 +869,11 @@ class MainWindow(QMainWindow):
         self.hide()
         self.layoutSettingPanel.close()
         self.liverPanel.addLiverRoomWidget.close()
-        for videoWidget in self.videoWidgetList:
+        for videoWidget in self.videoWidgetList + self.popVideoWidgetList:
             videoWidget.getMediaURL.recordToken = False  # 关闭缓存并清除
             videoWidget.getMediaURL.checkTimer.stop()
             videoWidget.checkPlaying.stop()
-            videoWidget.mediaStop()
-            videoWidget.close()
-        for videoWidget in self.popVideoWidgetList:  # 关闭悬浮窗
-            videoWidget.getMediaURL.recordToken = False
-            videoWidget.getMediaURL.checkTimer.stop()
-            videoWidget.checkPlaying.stop()
-            videoWidget.mediaStop()
+            videoWidget.mediaStop(deleteMedia=False)  # 不要清除播放窗记录
             videoWidget.close()
         self.dumpConfig.start()
 
