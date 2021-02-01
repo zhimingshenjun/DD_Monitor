@@ -45,6 +45,7 @@ class ControlWidget(QWidget):
 class ScrollArea(QScrollArea):
     multipleTimes = pyqtSignal(int)
     addLiver = pyqtSignal()
+    clearAll = pyqtSignal()
 
     def __init__(self):
         super(ScrollArea, self).__init__()
@@ -58,9 +59,13 @@ class ScrollArea(QScrollArea):
         if QMouseEvent.button() == Qt.RightButton:
             menu = QMenu()
             addLiver = menu.addAction('添加直播间')
+            menu.addSeparator()  # 添加分割线，防止误操作
+            clearAll = menu.addAction('清空')
             action = menu.exec_(self.mapToGlobal(QMouseEvent.pos()))
             if action == addLiver:
                 self.addLiver.emit()
+            elif action == clearAll:
+                self.clearAll.emit()
 
     def wheelEvent(self, QEvent):
         if QEvent.angleDelta().y() < 0:
@@ -414,6 +419,7 @@ class MainWindow(QMainWindow):
         self.scrollArea.setWidget(self.liverPanel)
         self.scrollArea.multipleTimes.connect(self.changeLiverPanelLayout)
         self.scrollArea.addLiver.connect(self.liverPanel.openLiverRoomPanel)
+        self.scrollArea.clearAll.connect(self.clearLiverPanel)
         self.addButton.clicked.connect(self.liverPanel.openLiverRoomPanel)
         self.liverPanel.updatePlayingStatus(self.config['player'])
         progressText.setText('设置主播选择控制...')
@@ -558,6 +564,11 @@ class MainWindow(QMainWindow):
         # toVideoPos = toVideo.mapToGlobal(toVideo.pos())
         # fromVideo.textBrowser.move(toVideoPos + QPoint(toWidth * fromVideo.deltaX, toHeight * fromVideo.deltaY))
         # toVideo.textBrowser.move(fromVideoPos + QPoint(fromWidth * toVideo.deltaX, fromHeight * toVideo.deltaY))
+
+    def clearLiverPanel(self):  # 清空卡片槽
+        reply = QMessageBox.information(self, '清空卡片槽', '注意：是否要清空卡片槽？', QMessageBox.Yes | QMessageBox.No)
+        if reply == QMessageBox.Yes:  # 确认用户操作
+            self.liverPanel.deleteAll()
 
     def setDanmu(self):
         self.dumpConfig.start()

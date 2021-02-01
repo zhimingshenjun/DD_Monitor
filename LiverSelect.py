@@ -968,6 +968,14 @@ class LiverPanel(QWidget):
         self.refreshPanel()
         self.dumpConfig.emit()  # 发送保存config信号
 
+    def deleteAll(self):  # 清空卡片槽
+        self.roomIDDict.clear()
+        self.roomIDList = []
+        for cover in self.coverList:
+            cover.roomID = '0'
+        self.refreshPanel()
+        self.dumpConfig.emit()
+
     def changeTop(self, info):
         self.roomIDDict[int(info[0])] = info[1]  # 房号 置顶token
         self.refreshPanel()
