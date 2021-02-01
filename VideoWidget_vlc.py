@@ -548,7 +548,6 @@ class VideoWidget(QFrame):
         if not self.top:  # 非弹出类悬浮窗
             self.popWindow.emit([self.id, self.roomID, self.quality, True, self.startWithDanmu])
             self.mediaStop()  # 直接停止播放原窗口
-            # self.mediaPlay(1, True)  # 暂停播放
 
     def leftMouseClicked(self):  # 设置drag事件 发送拖动封面的房间号
         drag = QDrag(self)
@@ -706,7 +705,7 @@ class VideoWidget(QFrame):
         if not self.top:
             if action == popWindow:
                 self.popWindow.emit([self.id, self.roomID, self.quality, False, self.startWithDanmu])
-                self.mediaPlay(1, True)  # 暂停播放
+                # self.mediaPlay(1, True)  # 暂停播放
         elif self.top:
             if action == percent100:
                 self.setWindowOpacity(1)
@@ -789,14 +788,16 @@ class VideoWidget(QFrame):
         self.textSetting[0] = not self.textBrowser.isHidden()
         self.setDanmu.emit()
 
-    def mediaPlay(self, force=0, stopDownload=False):
+    def mediaPlay(self, force=0, stopDownload=False, setUserPause=False):
         if force == 1:
             self.player.set_pause(1)
-            # self.userPause = True
+            if setUserPause:
+                self.userPause = True
             self.play.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         elif force == 2:
             self.player.play()
-            # self.userPause = False
+            if setUserPause:
+                self.userPause = False
             self.play.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
         elif self.player.get_state() == vlc.State.Playing:
             self.player.set_pause(1)

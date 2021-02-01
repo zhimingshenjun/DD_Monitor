@@ -630,7 +630,7 @@ class MainWindow(QMainWindow):
             self.play.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
         self.globalPlayToken = not self.globalPlayToken
         for videoWidget in self.videoWidgetList:
-            videoWidget.mediaPlay(force)
+            videoWidget.mediaPlay(force, setUserPause=True)
 
     def globalMediaReload(self):
         for videoWidget in self.videoWidgetList:
