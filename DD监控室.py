@@ -775,7 +775,7 @@ class MainWindow(QMainWindow):
         QDesktopServices.openUrl(QUrl(r'https://github.com/zhimingshenjun/DD_Monitor'))
 
     def openBilibili(self):
-        QDesktopServices.openUrl(QUrl(r'https://www.bilibili.com/video/BV1yo4y1d7iP'))
+        QDesktopServices.openUrl(QUrl(r'https://www.bilibili.com/video/BV14v411s7WE'))
 
     def openDDSubtitle(self):
         QDesktopServices.openUrl(QUrl(r'https://www.bilibili.com/video/BV1p5411b7o7'))

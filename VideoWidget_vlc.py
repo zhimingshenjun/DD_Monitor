@@ -90,11 +90,6 @@ class GetMediaURL(QThread):
         r = requests.get(api)
         try:
             url = json.loads(r.text)['data']['durl'][0]['url']
-            # if 'qn=' in url:  # 计算等待时长 已弃用
-            #     actualQuality = int(url.split('qn=')[1].split('&')[0])
-            # else:
-            #     actualQuality = self.quality
-            # maxCount = {10000: 100, 400: 100, 250: 100, 80: 100}[actualQuality]
             fileName = '%s/%s.flv' % (self.cacheFolder, self.id)
             download = requests.get(url, stream=True, headers=header)
             logging.debug(download.headers)
@@ -118,20 +113,17 @@ class GetMediaURL(QThread):
                     elif contentCnt == 100:
                         self.cacheName.emit(fileName)
             self.cacheVideo.close()
-            while True:
-                try:
-                    if self.saveCachePath and os.path.exists(self.saveCachePath):  # 如果备份路径有效
-                        formatTime = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time()))
-                        renameFile = '%s/%s.flv' % (self.cacheFolder, formatTime)
-                        os.rename(fileName, renameFile)
-                        self.copyFile.emit(renameFile)  # 发射信号备份缓存
-                    else:
-                        os.remove(fileName)  # 清除缓存
-                    # os.remove(fileName)
-                    break
-                except:
-                    time.sleep(0.05)
-        except:
+            try:
+                if self.saveCachePath and os.path.exists(self.saveCachePath):  # 如果备份路径有效
+                    renameFile = '%s/%s.flv' % (self.cacheFolder, time.time())
+                    os.rename(fileName, renameFile)
+                    self.copyFile.emit(renameFile)  # 发射信号备份缓存
+                else:
+                    os.remove(fileName)  # 清除缓存
+            except Exception as e:
+                print(str(e))
+        except Exception as e:
+            logging.error(str(e))
             logging.exception('直播地址获取失败 / 缓存视频出错')
 
 
@@ -800,11 +792,11 @@ class VideoWidget(QFrame):
     def mediaPlay(self, force=0, stopDownload=False):
         if force == 1:
             self.player.set_pause(1)
-            self.userPause = True
+            # self.userPause = True
             self.play.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         elif force == 2:
             self.player.play()
-            self.userPause = False
+            # self.userPause = False
             self.play.setIcon(self.style().standardIcon(QStyle.SP_MediaPause))
         elif self.player.get_state() == vlc.State.Playing:
             self.player.set_pause(1)
@@ -864,6 +856,7 @@ class VideoWidget(QFrame):
             self.mediaStop()
 
     def mediaStop(self, deleteMedia=True):
+        # self.userPause = True
         self.oldTitle, self.oldUname = '', ''
         self.roomID = '0'
         self.topLabel.setText(('    窗口%s  未定义的直播间' % (self.id + 1))[:20])  # 限制下直播间标题字数
@@ -909,10 +902,10 @@ class VideoWidget(QFrame):
         self.audioTimer.start()  # 检测音量是否正确
 
     def copyCache(self, copyFile):
-        fileName = os.path.split(copyFile)[1]
         title = self.oldTitle if self.oldTitle else self.title
         uname = self.oldUname if self.oldUname else self.uname
-        self.exportCache.setArgs(copyFile, '%s/%s_%s_%s' % (self.saveCachePath, uname, title, fileName))
+        formatTime = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time()))
+        self.exportCache.setArgs(copyFile, '%s/%s_%s_%s.flv' % (self.saveCachePath, uname, title, formatTime))
         self.exportCache.cut = True  # 设置为剪切
         self.exportCache.start()
 
