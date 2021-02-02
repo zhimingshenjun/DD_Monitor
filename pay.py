@@ -11,9 +11,12 @@ class DownloadImage(QThread):
         super(DownloadImage, self).__init__()
 
     def run(self):
-        r = requests.get(r'http://i0.hdslb.com/bfs/album/a4d2644425634cb8568570b77f4ba45f2b84fe67.png')
-        img = QPixmap.fromImage(QImage.fromData(r.content))
-        self.img.emit(img)
+        try:
+            r = requests.get(r'http://i0.hdslb.com/bfs/album/a4d2644425634cb8568570b77f4ba45f2b84fe67.png')
+            img = QPixmap.fromImage(QImage.fromData(r.content))
+            self.img.emit(img)
+        except Exception as e:
+            print(str(e))
 
 
 class thankToBoss(QThread):

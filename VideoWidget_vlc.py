@@ -3,7 +3,7 @@ DD监控室最重要的模块之一 视频播放窗口 现已全部从QMediaPlay
 包含视频缓存播放、音量管理、弹幕窗
 遇到不确定的播放状态就调用MediaReload()函数 我已经在里面写好了全部的处理 会自动获取直播间状态并进行对应的刷新操作
 '''
-import requests, json, os, time, shutil
+import requests, json, os, time, shutil, random
 from PyQt5.QtWidgets import * 	# QAction,QFileDialog
 from PyQt5.QtGui import *		# QIcon,QPixmap
 from PyQt5.QtCore import * 		# QSize
@@ -108,19 +108,24 @@ class GetMediaURL(QThread):
                     self.downloadToken = True
                     self.cacheVideo.write(chunk)
                     contentCnt += 1
+                    print(contentCnt)
                     if not contentCnt % self.maxCacheSize:  # 缓存超过用户设置的缓存大小（默认1GB）清除缓存刷新一次 原画大约要20分钟-30分钟
                         self.downloadError.emit()
                     elif contentCnt == 100:
+                        print('DONEEEEEEEEEE')
                         self.cacheName.emit(fileName)
             self.cacheVideo.close()
+            time.sleep(0.1)  # 等待0.1秒确保关闭
             try:
-                if self.saveCachePath and os.path.exists(self.saveCachePath):  # 如果备份路径有效
-                    renameFile = '%s/%s.flv' % (self.cacheFolder, time.time())
+                if self.saveCachePath and os.path.exists(self.saveCachePath) and os.path.getsize(fileName):  # 如果备份路径有效
+                    renameFile = '%s/%s.flv' % (self.cacheFolder, random.randint(50, 10000000))  # 随机命名防止重名
+                    print('renameeeeeeeeee')
                     os.rename(fileName, renameFile)
                     self.copyFile.emit(renameFile)  # 发射信号备份缓存
                 else:
                     os.remove(fileName)  # 清除缓存
             except Exception as e:
+                print(111111111111111111)
                 print(str(e))
         except Exception as e:
             logging.error(str(e))
@@ -895,6 +900,8 @@ class VideoWidget(QFrame):
 
     def copyCache(self, copyFile):
         title = self.oldTitle if self.oldTitle else self.title
+        for s in ['/', '\\', ':', '*', '"', '<', '>', '|', '？']:
+            title = title.replace(s, '')
         uname = self.oldUname if self.oldUname else self.uname
         formatTime = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time()))
         self.exportCache.setArgs(copyFile, '%s/%s_%s_%s.flv' % (self.saveCachePath, uname, title, formatTime))
