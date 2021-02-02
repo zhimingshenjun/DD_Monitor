@@ -108,25 +108,21 @@ class GetMediaURL(QThread):
                     self.downloadToken = True
                     self.cacheVideo.write(chunk)
                     contentCnt += 1
-                    print(contentCnt)
                     if not contentCnt % self.maxCacheSize:  # 缓存超过用户设置的缓存大小（默认1GB）清除缓存刷新一次 原画大约要20分钟-30分钟
                         self.downloadError.emit()
-                    elif contentCnt == 100:
-                        print('DONEEEEEEEEEE')
+                    elif contentCnt == 50:
                         self.cacheName.emit(fileName)
             self.cacheVideo.close()
             time.sleep(0.1)  # 等待0.1秒确保关闭
             try:
                 if self.saveCachePath and os.path.exists(self.saveCachePath) and os.path.getsize(fileName):  # 如果备份路径有效
                     renameFile = '%s/%s.flv' % (self.cacheFolder, random.randint(50, 10000000))  # 随机命名防止重名
-                    print('renameeeeeeeeee')
                     os.rename(fileName, renameFile)
                     self.copyFile.emit(renameFile)  # 发射信号备份缓存
                 else:
                     os.remove(fileName)  # 清除缓存
             except Exception as e:
-                print(111111111111111111)
-                print(str(e))
+                logging.error(str(e))
         except Exception as e:
             logging.error(str(e))
             logging.exception('直播地址获取失败 / 缓存视频出错')
