@@ -288,7 +288,7 @@ class CoverLabel(QLabel):
     def recordError(self, roomID):
         self.recordThread.checkTimer.stop()
         self.refreshStateLabel()
-        QMessageBox.information(self, '录制中止', '%s 录制结束 请检查网络或主播是否掉线' % roomID, QMessageBox.Ok)
+        QMessageBox.information(self, '录制中止', '%s %s 录制结束 请检查网络或主播是否掉线' % (self.title, roomID), QMessageBox.Ok)
 
     def updateProfile(self, img):
         self.profile.set_image(img)
@@ -324,6 +324,7 @@ class CoverLabel(QLabel):
                 top = menu.addAction('添加置顶')
             else:
                 top = menu.addAction('取消置顶')
+            record = None
             if self.recordState == 0:  # 无录制任务
                 if self.liveState == 1:
                     record = menu.addAction('录制(最高画质)')
@@ -869,6 +870,7 @@ class LiverPanel(QWidget):
     addToWindow = pyqtSignal(list)
     dumpConfig = pyqtSignal()
     refreshIDList = pyqtSignal(list)
+    startLiveList = pyqtSignal(list)
 
     def __init__(self, roomIDDict, app_path):
         super(LiverPanel, self).__init__()
@@ -933,6 +935,7 @@ class LiverPanel(QWidget):
     def refreshRoomPanel(self, liverInfo):  # 异步刷新图卡
         self.refreshCount += 1  # 刷新计数+1
         roomIDToRefresh = []
+        roomIDStartLive = []
         firstRefresh = False
         for index, info in enumerate(liverInfo):
             if info[0]:  # uid有效
@@ -951,6 +954,8 @@ class LiverPanel(QWidget):
                     self.oldLiveStatus[info[1]] = info[4]  # 房号: 直播状态
                     firstRefresh = True  # 第一次刷新
                 elif self.oldLiveStatus[info[1]] != info[4]:  # 状态发生变化
+                    if info[4] == 1:
+                        roomIDStartLive.append(info[2])  # 添加开播主播名字
                     roomIDToRefresh.append(info[1])  # 发送给主界面要刷新的房间号
                     self.oldLiveStatus[info[1]] = info[4]  # 更新旧的直播状态列表
             else:  # 错误的房号
@@ -960,6 +965,8 @@ class LiverPanel(QWidget):
         if roomIDToRefresh:
             self.refreshIDList.emit(roomIDToRefresh)
             self.refreshPanel()  # 修改刷新策略 只有当有主播直播状态发生变化后才会刷新 降低闪退风险
+        if roomIDStartLive:
+            self.startLiveList.emit(roomIDStartLive)  # 发送开播列表
         elif firstRefresh:
             self.refreshPanel()
         elif not self.refreshCount % 3:  # 每20s x 3 = 1分钟强制刷新一次

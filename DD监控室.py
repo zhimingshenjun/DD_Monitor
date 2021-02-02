@@ -88,6 +88,24 @@ class ScrollArea(QScrollArea):
 #         self.setWindowTitle(title)
 
 
+class StartLiveWindow(QWidget):
+    def __init__(self):
+        super(StartLiveWindow, self).__init__()
+        self.setWindowTitle('开播提醒')
+        self.setWindowFlag(Qt.WindowStaysOnTopHint)
+        self.resize(240, 70)
+        self.tipLabel = QLabel()
+        self.tipLabel.setStyleSheet('color:#293038;background-color:#eeeeee')
+        self.tipLabel.setFont(QFont('微软雅黑', 15, QFont.Bold))
+        layout = QGridLayout(self)
+        layout.setContentsMargins(3, 3, 3, 3)
+        layout.addWidget(self.tipLabel)
+
+        self.hideTimer = QTimer()
+        self.hideTimer.setInterval(10000)
+        self.hideTimer.timeout.connect(self.hide)  # 10秒倒计时结束隐藏
+
+
 class CacheSetting(QWidget):
     setting = pyqtSignal(list)
 
@@ -298,6 +316,8 @@ class MainWindow(QMainWindow):
         self.cacheSetting.setting.connect(self.setCache)
         self.hotKey = HotKey()
         self.pay = pay()
+        self.startLiveWindow = StartLiveWindow()
+
 
         # ---- 内嵌/弹出播放器初始化 ----
         self.videoWidgetList = []
@@ -421,6 +441,7 @@ class MainWindow(QMainWindow):
         self.liverPanel.addToWindow.connect(self.addCoverToPlayer)
         self.liverPanel.dumpConfig.connect(self.dumpConfig.start)  # 保存config
         self.liverPanel.refreshIDList.connect(self.refreshPlayerStatus)  # 刷新播放器
+        self.liverPanel.startLiveList.connect(self.startLiveTip)  # 开播提醒
         self.scrollArea.setWidget(self.liverPanel)
         self.scrollArea.multipleTimes.connect(self.changeLiverPanelLayout)
         self.scrollArea.addLiver.connect(self.liverPanel.openLiverRoomPanel)
@@ -1031,6 +1052,15 @@ class MainWindow(QMainWindow):
                     videoWidget.mediaReload()
                     break
 
+    def startLiveTip(self, startLiveList):  # 开播提醒
+        self.startLiveWindow.resize(240, 70)
+        self.startLiveWindow.move(self.pos() + QPoint(50, 50))
+        startLivers = ''
+        for liver in startLiveList:
+            startLivers += '  %s 开播啦!~\n' % liver
+        self.startLiveWindow.tipLabel.setText(startLivers)
+        self.startLiveWindow.show()
+        self.startLiveWindow.hideTimer.start()
 
 # 程序入口点
 if __name__ == '__main__':

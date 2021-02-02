@@ -491,15 +491,6 @@ class VideoWidget(QFrame):
         self.slider.hide() if self.width() < 200 else self.slider.show()
         width = self.width() * self.horiPercent
         self.textBrowser.resize(width, self.height() * self.vertPercent)
-        # if width > 300:
-        #     self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 16, QFont.Bold))
-        #     self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 16, QFont.Bold))
-        # elif 240 < width <= 300:
-        #     self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 1, QFont.Bold))
-        #     self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', width // 20 + 1, QFont.Bold))
-        # else:
-        #     self.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', 12, QFont.Bold))
-        #     self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 12, QFont.Bold))
         self.textBrowser.textBrowser.verticalScrollBar().setValue(100000000)
         self.textBrowser.transBrowser.verticalScrollBar().setValue(100000000)
         self.moveTextBrowser()
@@ -510,12 +501,12 @@ class VideoWidget(QFrame):
 
     def moveTextBrowser(self, point=None):
         videoPos = self.mapToGlobal(self.videoFrame.pos())  # videoFrame的坐标要转成globalPos
-        videoX, videoY = videoPos.x(), videoPos.y()
-        videoW, videoH = self.videoFrame.width(), self.videoFrame.height()
         if point:
             danmuX, danmuY = point.x(), point.y()
         else:
             danmuX, danmuY = self.textBrowser.x(), self.textBrowser.y()  # textBrowser坐标本身就是globalPos
+        videoX, videoY = videoPos.x(), videoPos.y()
+        videoW, videoH = self.videoFrame.width(), self.videoFrame.height()
         danmuW, danmuH = self.textBrowser.width(), self.textBrowser.height()
         smaller = False  # 弹幕机尺寸大于播放窗
         if danmuW > videoW or danmuH > videoH + 5:  # +5是为了在100%纵向的时候可以左右拖 有的屏幕计算会略微超过一两个像素
