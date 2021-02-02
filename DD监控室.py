@@ -53,7 +53,7 @@ class ScrollArea(QScrollArea):
         self.horizontalScrollBar().setVisible(False)
 
     def sizeHint(self):
-        return QSize(100, 100)
+        return QSize(100, 90)
 
     def mouseReleaseEvent(self, QMouseEvent):
         if QMouseEvent.button() == Qt.RightButton:
@@ -373,7 +373,10 @@ class MainWindow(QMainWindow):
         self.danmuOption.translateCombobox.currentIndexChanged.connect(self.setGlobalTranslateBrowser)
         self.danmuOption.translateFitler.textChanged.connect(self.setGlobalTranslateFilter)
         self.danmuOption.fontSizeCombox.currentIndexChanged.connect(self.setGlobalFontSize)
-        self.danmuButton = ToolButton(self.style().standardIcon(QStyle.SP_FileDialogDetailedView))
+        # self.danmuButton = ToolButton(self.style().standardIcon(QStyle.SP_FileDialogDetailedView))
+        icon = QIcon()
+        icon.addFile(os.path.join(application_path, 'utils/danmu.png'))
+        self.danmuButton = PushButton(icon)
         self.danmuButton.clicked.connect(self.danmuOption.show)
         # self.danmuButton = PushButton(text='弹')
         # self.globalDanmuToken = True

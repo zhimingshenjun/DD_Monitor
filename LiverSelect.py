@@ -94,16 +94,16 @@ class PushButton(QPushButton):
             self.setStyleSheet('background-color:#31363b;border-width:1px')
 
 
-class RequestAPI(QThread):
-    data = pyqtSignal(dict)
-
-    def __init__(self, roomID):
-        super(RequestAPI, self).__init__()
-        self.roomID = roomID
-
-    def run(self):
-        r = requests.get(r'https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=%s' % self.roomID)
-        self.data.emit(json.loads(r.text))
+# class RequestAPI(QThread):
+#     data = pyqtSignal(dict)
+#
+#     def __init__(self, roomID):
+#         super(RequestAPI, self).__init__()
+#         self.roomID = roomID
+#
+#     def run(self):
+#         r = requests.get(r'https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=%s' % self.roomID)
+#         self.data.emit(json.loads(r.text))
 
 
 class RecordThread(QThread):
@@ -332,6 +332,7 @@ class CoverLabel(QLabel):
             else:  # 录制中或等待录制
                 record = menu.addAction('取消录制')
             openBrowser = menu.addAction('打开直播间')
+            copyRoomID = menu.addAction('复制房号 %s' % self.roomID)
             menu.addSeparator()  # 添加分割线，防止误操作
             delete = menu.addAction('删除')
             action = menu.exec_(self.mapToGlobal(QMouseEvent.pos()))
@@ -384,6 +385,9 @@ class CoverLabel(QLabel):
             elif action == openBrowser:
                 if self.roomID != '0':
                     QDesktopServices.openUrl(QUrl(r'https://live.bilibili.com/%s' % self.roomID))
+            elif action == copyRoomID:
+                clipboard = QApplication.clipboard()
+                clipboard.setText(self.roomID)
             elif action == addTo:
                 for index, i in enumerate(addWindow):
                     if action == i:
@@ -841,18 +845,21 @@ class CollectLiverInfo(QThread):
                             exist = True
                             liverInfo.append([uid, str(roomID), uname, face, liveStatus, keyFrame, title])
                             break
-                    if not exist:
-                        r = requests.get(r'https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=%s' % roomID)
-                        r.encoding = 'utf8'
-                        banData = json.loads(r.text)['data']
-                        if banData:
-                            try:
-                                uname = banData['anchor_info']['base_info']['uname']
-                            except:
+                    try:
+                        if not exist:
+                            r = requests.get(r'https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=%s' % roomID)
+                            r.encoding = 'utf8'
+                            banData = json.loads(r.text)['data']
+                            if banData:
+                                try:
+                                    uname = banData['anchor_info']['base_info']['uname']
+                                except:
+                                    uname = ''
+                            else:
                                 uname = ''
-                        else:
-                            uname = ''
-                        liverInfo.append([None, str(roomID), uname])
+                            liverInfo.append([None, str(roomID), uname])
+                    except Exception as e:
+                        print(str(e))
             if liverInfo:
                 self.liverInfo.emit(liverInfo)
             time.sleep(20)  # 冷却时间
