@@ -105,6 +105,9 @@ class StartLiveWindow(QWidget):
         self.hideTimer.setInterval(10000)
         self.hideTimer.timeout.connect(self.hide)  # 10秒倒计时结束隐藏
 
+    def mousePressEvent(self, QMouseEvent):  # 点击的话就停止倒计时
+        self.hideTimer.stop()
+
 
 class CacheSetting(QWidget):
     setting = pyqtSignal(list)
@@ -566,7 +569,7 @@ class MainWindow(QMainWindow):
 
         fromWidth, fromHeight = fromVideo.width(), fromVideo.height()
         toWidth, toHeight = toVideo.width(), toVideo.height()
-        if 3 < abs(fromWidth - toWidth) or 3 < abs(fromHeight - toHeight):  # 有主次关系的播放窗交换同时交换音量
+        if 3 < abs(fromWidth - toWidth) or 3 < abs(fromHeight - toHeight):  # 有主次关系的播放窗交换同时交换音量和弹幕设置
             fromMuted = 2 if fromVideo.player.audio_get_mute() else 1
             toMuted = 2 if toVideo.player.audio_get_mute() else 1
             fromVolume, toVolume = fromVideo.player.audio_get_volume(), toVideo.player.audio_get_volume()  # 音量值
@@ -574,6 +577,28 @@ class MainWindow(QMainWindow):
             fromVideo.setVolume(toVolume)  # 交换音量
             toVideo.mediaMute(fromMuted)
             toVideo.setVolume(fromVolume)
+
+            fromVideo.textSetting, toVideo.textSetting = toVideo.textSetting, fromVideo.textSetting  # 交换弹幕设置
+            for videoWidget in [fromVideo, toVideo]:
+                color = str(hex(int(videoWidget.textSetting[1] / 101 * 256)))[2:] + '000000'
+                videoWidget.textBrowser.textBrowser.setStyleSheet('background-color:#%s' % color)  # 设置透明度
+                videoWidget.textBrowser.transBrowser.setStyleSheet('background-color:#%s' % color)
+                videoWidget.horiPercent = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0][videoWidget.textSetting[2]]
+                videoWidget.vertPercent = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0][videoWidget.textSetting[3]]
+                if videoWidget.textSetting[4] == 0:  # 显示弹幕和同传
+                    videoWidget.textBrowser.textBrowser.show()
+                    videoWidget.textBrowser.transBrowser.show()
+                elif videoWidget.textSetting[4] == 1:  # 只显示弹幕
+                    videoWidget.textBrowser.transBrowser.hide()
+                    videoWidget.textBrowser.textBrowser.show()
+                elif videoWidget.textSetting[4] == 2:  # 只显示同传
+                    videoWidget.textBrowser.textBrowser.hide()
+                    videoWidget.textBrowser.transBrowser.show()
+                videoWidget.filters = videoWidget.textSetting[5].split(' ')
+                size = videoWidget.textSetting[6]
+                videoWidget.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', size + 5, QFont.Bold))
+                videoWidget.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', size + 5, QFont.Bold))
+
         self.videoWidgetList[fromID], self.videoWidgetList[toID] = toVideo, fromVideo  # 交换控件列表
         self.config['player'][toID] = fromRoomID  # 记录config
         self.config['player'][fromID] = toRoomID
@@ -703,7 +728,6 @@ class MainWindow(QMainWindow):
             videoWidget.textSetting[1] = value  # 记录设置
             videoWidget.textBrowser.textBrowser.setStyleSheet('background-color:#%s' % color)
             videoWidget.textBrowser.transBrowser.setStyleSheet('background-color:#%s' % color)
-            videoWidget.setDanmu.emit()
 
     def setGlobalHorizontalPercent(self, index):  # 设置弹幕框水平宽度
         for videoWidget in self.videoWidgetList + self.popVideoWidgetList:
@@ -713,7 +737,6 @@ class MainWindow(QMainWindow):
             videoWidget.textBrowser.resize(width, videoWidget.textBrowser.height())
             videoWidget.textBrowser.textBrowser.verticalScrollBar().setValue(100000000)
             videoWidget.textBrowser.transBrowser.verticalScrollBar().setValue(100000000)
-            videoWidget.setDanmu.emit()
 
     def setGlobalVerticalPercent(self, index):  # 设置弹幕框垂直高度
         for videoWidget in self.videoWidgetList + self.popVideoWidgetList:
@@ -723,7 +746,6 @@ class MainWindow(QMainWindow):
             videoWidget.textBrowser.resize(videoWidget.textBrowser.width(), height)
             videoWidget.textBrowser.textBrowser.verticalScrollBar().setValue(100000000)
             videoWidget.textBrowser.transBrowser.verticalScrollBar().setValue(100000000)
-            videoWidget.setDanmu.emit()
 
     def setGlobalTranslateBrowser(self, index):
         for videoWidget in self.videoWidgetList + self.popVideoWidgetList:
@@ -740,20 +762,17 @@ class MainWindow(QMainWindow):
             width = videoWidget.width() * videoWidget.horiPercent
             height = videoWidget.height() * videoWidget.vertPercent
             videoWidget.textBrowser.resize(width, height)
-            videoWidget.setDanmu.emit()
 
     def setGlobalTranslateFilter(self, filterWords):
         for videoWidget in self.videoWidgetList + self.popVideoWidgetList:
             videoWidget.textSetting[5] = filterWords
             videoWidget.filters = filterWords.split(' ')
-            videoWidget.setDanmu.emit()
 
     def setGlobalFontSize(self, index):
         for videoWidget in self.videoWidgetList + self.popVideoWidgetList:
             videoWidget.textSetting[6] = index
             videoWidget.textBrowser.textBrowser.setFont(QFont('Microsoft JhengHei', index + 5, QFont.Bold))
             videoWidget.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', index + 5, QFont.Bold))
-            videoWidget.setDanmu.emit()
 
     def globalQuality(self, quality):
         for videoWidget in self.videoWidgetList + self.popVideoWidgetList:

@@ -100,7 +100,7 @@ class GetMediaURL(QThread):
                     self.cacheVideo = open(fileName, 'wb')  # 等待上次缓存关闭
                     break
                 except:
-                    time.sleep(0.05)
+                    time.sleep(0.1)
             for chunk in download.iter_content(chunk_size=512):
                 if not self.recordToken:
                     break
@@ -930,6 +930,7 @@ class VideoWidget(QFrame):
         """
         if self.player:
             self.player.stop()
+            self.player.release()
         self.newPlayer()
         # 后续视频流设置由 GetMediaURL 发送 cacheName 信号执行 self.setMedia 完成
 
