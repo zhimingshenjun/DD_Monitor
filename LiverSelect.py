@@ -518,7 +518,7 @@ class AddLiverRoomWidget(QWidget):
         layout.addWidget(QLabel('请输入B站直播间房号 多个房号之间用空格隔开'), 0, 0, 1, 4)
         self.roomEditText = ''
         self.roomEdit = QLineEdit()
-        self.roomEdit.textChanged.connect(self.editChange)
+        # self.roomEdit.textChanged.connect(self.editChange)  # 手感不好 还是取消了
         layout.addWidget(self.roomEdit, 1, 0, 1, 5)
         confirm = QPushButton('完成')
         confirm.setFixedHeight(28)

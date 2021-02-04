@@ -1076,7 +1076,7 @@ class MainWindow(QMainWindow):
         self.startLiveWindow.move(self.pos() + QPoint(50, 50))
         startLivers = ''
         for liver in startLiveList:
-            startLivers += '  %s 开播啦!~\n' % liver
+            startLivers += '  %s 开播啦!~  \n' % liver
         self.startLiveWindow.tipLabel.setText(startLivers)
         self.startLiveWindow.show()
         self.startLiveWindow.hideTimer.start()
