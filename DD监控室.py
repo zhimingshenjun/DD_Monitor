@@ -261,6 +261,8 @@ class MainWindow(QMainWindow):
                 self.config['roomid'] = {}
                 for roomID in roomIDList:
                     self.config['roomid'][roomID] = False
+            if '0' in self.config['roomid']:  # 过滤0房间号
+                del self.config['roomid']['0']
             if 'quality' not in self.config:
                 self.config['quality'] = [80] * 9
             if 'audioChannel' not in self.config:
