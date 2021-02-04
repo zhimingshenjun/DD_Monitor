@@ -1009,6 +1009,7 @@ class MainWindow(QMainWindow):
                     config = {}
                 if config:  # 如果能成功读取到config文件
                     # config['roomid'].update(self.config['roomid'])  # 添加现有直播间
+                    config['layout'] = self.config['layout']  # 保持最新layout
                     self.config = config
                     while len(self.config['player']) < 9:
                         self.config['player'].append(0)
@@ -1028,7 +1029,7 @@ class MainWindow(QMainWindow):
                             self.config['danmu'][index] = [textSetting, 20, 1, 7, 0, '【 [ {']
                     if 'hardwareDecode' not in self.config:
                         self.config['hardwareDecode'] = True
-                    self.liverPanel.addLiverRoomList(self.config['roomid'].keys())
+                    self.liverPanel.addLiverRoomList(self.config['roomid'])
                     QMessageBox.information(self, '导入预设', '导入完成', QMessageBox.Ok)
 
     def muteExcept(self):

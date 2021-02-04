@@ -239,7 +239,7 @@ class CoverLabel(QLabel):
                 self.stateLabel.setText('房间可能被封')
             else:
                 self.titleLabel.setText(info[1])
-                self.stateLabel.setText('无该房间')
+                self.stateLabel.setText('无该房间或已加密')
             self.setStyleSheet('background-color:#8B3A3A')  # 红色背景
         else:
             if self.firstUpdateToken:  # 初始化
@@ -505,7 +505,7 @@ class HotLiverTable(QTableWidget):
 
 
 class AddLiverRoomWidget(QWidget):
-    roomList = pyqtSignal(list)
+    roomList = pyqtSignal(dict)
 
     def __init__(self,application_path):
         super(AddLiverRoomWidget, self).__init__()
@@ -752,10 +752,10 @@ class AddLiverRoomWidget(QWidget):
     def sendSelectedRoom(self):
         self.closeEvent(None)
         tmpList = self.roomEdit.text().strip().replace('\t', ' ').split(' ')
-        roomList = []
+        roomList = {}
         for i in tmpList:
             if i.isnumeric():
-                roomList.append(i)  # 全部统一为字符串格式的roomid
+                roomList[i] = False  # 全部统一为字符串格式的roomid
         self.roomList.emit(roomList)
         self.roomEdit.clear()
         self.hide()
@@ -906,22 +906,27 @@ class LiverPanel(QWidget):
         self.addLiverRoomWidget.hide()
         self.addLiverRoomWidget.show()
 
-    def addLiverRoomList(self, roomList):
+    def addLiverRoomList(self, roomDict):
         logging.debug("接收到新的主播列表")
         newID = []
-        for roomID in roomList:  # 如果id不在老列表里面 则添加
+        for roomID, topToken in roomDict.items():  # 如果id不在老列表里面 则添加
             if len(roomID) <= 4:  # 查询短号
                 try:
                     r = requests.get('https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=%s' % roomID)
                     data = json.loads(r.text)['data']
-                    roomID = data['room_info']['room_id']
+                    roomID = str(data['room_info']['room_id'])
                     # print(roomID)
                 except:
                     logging.exception('房间号查询失败')
             if roomID not in self.roomIDDict:
                 newID.append(roomID)
+            else:
+                for cover in self.coverList:
+                    if cover.roomID == roomID:
+                        cover.topToken = topToken
+                        break
         for index, roomID in enumerate(newID):  # 添加id并创建新的预览图卡
-            self.coverList.append(CoverLabel(str(roomID), False))
+            self.coverList.append(CoverLabel(roomID, roomDict[roomID]))
             self.coverList[-1].addToWindow.connect(self.addCoverToPlayer)  # 添加至播放窗口
             self.coverList[-1].deleteCover.connect(self.deleteCover)
             self.coverList[-1].changeTopToken.connect(self.changeTop)
@@ -931,6 +936,7 @@ class LiverPanel(QWidget):
         self.collectLiverInfo.wait()
         self.collectLiverInfo.start()
         self.dumpConfig.emit()  # 发送保存config信号
+        self.refreshPanel()
 
     def refreshRoomPanel(self, liverInfo):  # 异步刷新图卡
         self.refreshCount += 1  # 刷新计数+1
