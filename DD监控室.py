@@ -283,6 +283,8 @@ class MainWindow(QMainWindow):
             if 'startWithDanmu' not in self.config:
                 self.config['startWithDanmu'] = True
                 logging.warning('启动时加载弹幕没有被设置，默认加载')
+            if 'showStartLive' not in self.config:
+                self.config['showStartLive'] = True
             for danmuConfig in self.config['danmu']:
                 if len(danmuConfig) == 6:
                     danmuConfig.append(10)
@@ -301,7 +303,8 @@ class MainWindow(QMainWindow):
                 'hardwareDecode': True,
                 'maxCacheSize': 2048000,
                 'saveCachePath': '',
-                'startWithDanmu': True
+                'startWithDanmu': True,
+                'showStartLive': True,
             }
         self.dumpConfig = DumpConfig(self.config)
 
@@ -479,6 +482,11 @@ class MainWindow(QMainWindow):
         hardDecodeMenu.addAction(hardDecodeAction)
         softDecodeAction = QAction('软解', self, triggered=lambda: self.setDecode(False))
         hardDecodeMenu.addAction(softDecodeAction)
+        startLiveSetting = self.optionMenu.addMenu('开播提醒 ►')
+        enableStartLive = QAction('打开', self, triggered=lambda: self.setStartLive(True))
+        startLiveSetting.addAction(enableStartLive)
+        disableStartLive = QAction('关闭', self, triggered=lambda: self.setStartLive(False))
+        startLiveSetting.addAction(disableStartLive)
         cacheSizeSetting = QAction('缓存设置', self, triggered=self.openCacheSetting)
         self.optionMenu.addAction(cacheSizeSetting)
         startWithDanmuSetting = QAction('自动加载弹幕设置', self, triggered=self.openStartWithDanmuSetting)
@@ -797,6 +805,9 @@ class MainWindow(QMainWindow):
         self.globalMediaReload()
         self.config['hardwareDecode'] = hardwareDecodeToken
 
+    def setStartLive(self, token):
+        self.config['showStartLive'] = token
+
     def openControlPanel(self):
         if self.controlDock.isHidden() and self.cardDock.isHidden():
             self.controlDock.show()
@@ -1075,14 +1086,15 @@ class MainWindow(QMainWindow):
                     break
 
     def startLiveTip(self, startLiveList):  # 开播提醒
-        self.startLiveWindow.resize(240, 70)
-        self.startLiveWindow.move(self.pos() + QPoint(50, 50))
-        startLivers = ''
-        for liver in startLiveList:
-            startLivers += '  %s 开播啦!~  \n' % liver
-        self.startLiveWindow.tipLabel.setText(startLivers)
-        self.startLiveWindow.show()
-        self.startLiveWindow.hideTimer.start()
+        if self.config['showStartLive']:
+            self.startLiveWindow.resize(240, 70)
+            self.startLiveWindow.move(self.pos() + QPoint(50, 50))
+            startLivers = ''
+            for liver in startLiveList:
+                startLivers += '  %s 开播啦!~  \n' % liver
+            self.startLiveWindow.tipLabel.setText(startLivers)
+            self.startLiveWindow.show()
+            self.startLiveWindow.hideTimer.start()
 
 # 程序入口点
 if __name__ == '__main__':

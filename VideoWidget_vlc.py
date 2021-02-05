@@ -545,7 +545,8 @@ class VideoWidget(QFrame):
         drag = QDrag(self)
         mimeData = QMimeData()
         if self.top:  # 悬浮窗
-            mimeData.setText('roomID:%s' % self.roomID)
+            # mimeData.setText('roomID:%s' % self.roomID)
+            mimeData.setText('')
         else:
             mimeData.setText('exchange:%s:%s' % (self.id, self.roomID))
         drag.setMimeData(mimeData)
@@ -558,6 +559,7 @@ class VideoWidget(QFrame):
     def dropEvent(self, QDropEvent):
         if QDropEvent.mimeData().hasText:
             text = QDropEvent.mimeData().text()  # 拖拽事件
+            print(text)
             if 'roomID' in text:  # 从cover拖拽新直播间
                 self.stopDanmuMessage()
                 self.roomID = text.split(':')[1]
@@ -568,6 +570,7 @@ class VideoWidget(QFrame):
             elif 'exchange' in text:  # 交换窗口
                 fromID, fromRoomID = text.split(':')[1:]  # exchange:id:roomID
                 fromID = int(fromID)
+                print(fromID, self.id)
                 if fromID != self.id:
                     self.exchangeMedia.emit([fromID, fromRoomID, self.id, self.roomID])
 
@@ -697,6 +700,7 @@ class VideoWidget(QFrame):
         if not self.top:
             if action == popWindow:
                 self.popWindow.emit([self.id, self.roomID, self.quality, False, self.startWithDanmu])
+                self.mediaStop()  # 停止播放
                 # self.mediaPlay(1, True)  # 暂停播放
         elif self.top:
             if action == percent100:

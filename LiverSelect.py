@@ -821,49 +821,52 @@ class CollectLiverInfo(QThread):
     def run(self):
         logging.debug("Collecting Liver Info...")
         while 1:
-            liverInfo = []
-            data = json.dumps({'ids': self.roomIDList})  # 根据直播间房号批量获取直播间信息
-            r = requests.post(r'https://api.live.bilibili.com/room/v2/Room/get_by_ids', data=data)
-            r.encoding = 'utf8'
-            data = json.loads(r.text)['data']
-            uidList = []
-            for roomID in data:
-                uidList.append(data[roomID]['uid'])
-            data = json.dumps({'uids': uidList})
-            r = requests.post(r'https://api.live.bilibili.com/room/v1/Room/get_status_info_by_uids', data=data)
-            r.encoding = 'utf8'
-            data = json.loads(r.text)['data']
-            if data:
-                for roomID in self.roomIDList:
-                    exist = False
-                    for uid, info in data.items():
-                        if roomID == info['room_id']:
-                            title = info['title']
-                            uname = info['uname']
-                            face = info['face']
-                            liveStatus = info['live_status']
-                            keyFrame = info['keyframe']
-                            exist = True
-                            liverInfo.append([uid, str(roomID), uname, face, liveStatus, keyFrame, title])
-                            break
-                    try:
-                        if not exist:
-                            r = requests.get(r'https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=%s' % roomID)
-                            r.encoding = 'utf8'
-                            banData = json.loads(r.text)['data']
-                            if banData:
-                                try:
-                                    uname = banData['anchor_info']['base_info']['uname']
-                                except:
+            try:
+                liverInfo = []
+                data = json.dumps({'ids': self.roomIDList})  # 根据直播间房号批量获取直播间信息
+                r = requests.post(r'https://api.live.bilibili.com/room/v2/Room/get_by_ids', data=data)
+                r.encoding = 'utf8'
+                data = json.loads(r.text)['data']
+                uidList = []
+                for roomID in data:
+                    uidList.append(data[roomID]['uid'])
+                data = json.dumps({'uids': uidList})
+                r = requests.post(r'https://api.live.bilibili.com/room/v1/Room/get_status_info_by_uids', data=data)
+                r.encoding = 'utf8'
+                data = json.loads(r.text)['data']
+                if data:
+                    for roomID in self.roomIDList:
+                        exist = False
+                        for uid, info in data.items():
+                            if roomID == info['room_id']:
+                                title = info['title']
+                                uname = info['uname']
+                                face = info['face']
+                                liveStatus = info['live_status']
+                                keyFrame = info['keyframe']
+                                exist = True
+                                liverInfo.append([uid, str(roomID), uname, face, liveStatus, keyFrame, title])
+                                break
+                        try:
+                            if not exist:
+                                r = requests.get(r'https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=%s' % roomID)
+                                r.encoding = 'utf8'
+                                banData = json.loads(r.text)['data']
+                                if banData:
+                                    try:
+                                        uname = banData['anchor_info']['base_info']['uname']
+                                    except:
+                                        uname = ''
+                                else:
                                     uname = ''
-                            else:
-                                uname = ''
-                            liverInfo.append([None, str(roomID), uname])
-                    except Exception as e:
-                        print(str(e))
-            if liverInfo:
-                self.liverInfo.emit(liverInfo)
-            time.sleep(20)  # 冷却时间
+                                liverInfo.append([None, str(roomID), uname])
+                        except Exception as e:
+                            print(str(e))
+                if liverInfo:
+                    self.liverInfo.emit(liverInfo)
+                time.sleep(20)  # 冷却时间
+            except Exception as e:
+                logging.error(str(e))
 
 
 class LiverPanel(QWidget):
@@ -926,7 +929,10 @@ class LiverPanel(QWidget):
                         cover.topToken = topToken
                         break
         for index, roomID in enumerate(newID):  # 添加id并创建新的预览图卡
-            self.coverList.append(CoverLabel(roomID, roomDict[roomID]))
+            if roomID in roomDict:
+                self.coverList.append(CoverLabel(roomID, roomDict[roomID]))
+            else:
+                self.coverList.append(CoverLabel(roomID, False))  # 添加短号的原长号
             self.coverList[-1].addToWindow.connect(self.addCoverToPlayer)  # 添加至播放窗口
             self.coverList[-1].deleteCover.connect(self.deleteCover)
             self.coverList[-1].changeTopToken.connect(self.changeTop)
