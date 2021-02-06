@@ -1,8 +1,8 @@
 """将弹幕机分离出来单独开发
 """
-from PyQt5.QtWidgets import * 	# QAction,QFileDialog
-from PyQt5.QtGui import *		# QIcon,QPixmap
-from PyQt5.QtCore import * 		# QSize
+from PyQt5.QtWidgets import QLabel, QToolButton, QWidget, QComboBox, QLineEdit, QTextBrowser, QGridLayout, QStyle
+from PyQt5.QtGui import QFont
+from PyQt5.QtCore import Qt, pyqtSignal, QPoint
 from CommonWidget import Slider
 
 
