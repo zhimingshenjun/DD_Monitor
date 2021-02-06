@@ -7,6 +7,7 @@ import requests, json, os, time, shutil, random
 from PyQt5.QtWidgets import * 	# QAction,QFileDialog
 from PyQt5.QtGui import *		# QIcon,QPixmap
 from PyQt5.QtCore import * 		# QSize
+from CommonWidget import Slider
 from remote import remoteThread
 from danmu import TextBrowser
 import vlc
@@ -29,32 +30,6 @@ class PushButton(QPushButton):
             self.setIcon(icon)
         elif text:
             self.setText(text)
-
-
-class Slider(QSlider):
-    value = pyqtSignal(int)
-
-    def __init__(self, value=100):
-        super(Slider, self).__init__()
-        self.setOrientation(Qt.Horizontal)
-        self.setFixedWidth(100)
-        self.setValue(value)
-
-    def mousePressEvent(self, event):
-        self.updateValue(event.pos())
-
-    def mouseMoveEvent(self, event):
-        self.updateValue(event.pos())
-
-    def wheelEvent(self, event):  # 把进度条的滚轮事件去了 用啥子滚轮
-        pass
-
-    def updateValue(self, QPoint):
-        value = QPoint.x()
-        if value > 100: value = 100
-        elif value < 0: value = 0
-        self.setValue(value)
-        self.value.emit(value)
 
 
 class GetMediaURL(QThread):
