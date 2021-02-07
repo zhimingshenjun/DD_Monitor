@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-'''
+"""
 通过QThread + websocket获取直播弹幕并返回给播放窗口模块做展示
-'''
+"""
 import asyncio
 import zlib
 import json
@@ -12,6 +12,9 @@ import logging
 
 
 class remoteThread(QThread):
+    """
+    TODO: 换用 bilibili_api.live.LiveDanmaku(room_display_id)
+    """
     message = pyqtSignal(str)
 
     def __init__(self, roomID):
