@@ -108,7 +108,7 @@ class PushButton(QPushButton):
 
 
 class RecordThread(QThread):
-    """获取直播推流并缓存
+    """获取直播推流并录制
     TODO: 换用 bilibili_api.live.get_room_play_url(room_id)
     """
     downloadTimer = pyqtSignal(str)
