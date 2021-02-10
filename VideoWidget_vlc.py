@@ -1,12 +1,13 @@
-'''
+"""
 DD监控室最重要的模块之一 视频播放窗口 现已全部从QMediaPlayer迁移至VLC内核播放（klite问题是在太多了。。。）
 包含视频缓存播放、音量管理、弹幕窗
 遇到不确定的播放状态就调用MediaReload()函数 我已经在里面写好了全部的处理 会自动获取直播间状态并进行对应的刷新操作
-'''
+"""
 import requests, json, os, time, shutil, random
 from PyQt5.QtWidgets import * 	# QAction,QFileDialog
 from PyQt5.QtGui import *		# QIcon,QPixmap
 from PyQt5.QtCore import * 		# QSize
+from CommonWidget import Slider
 from remote import remoteThread
 from danmu import TextBrowser
 import vlc
@@ -21,6 +22,7 @@ header = {
 
 
 class PushButton(QPushButton):
+    """文字/图标按钮"""
     def __init__(self, icon='', text=''):
         super(PushButton, self).__init__()
         self.setFixedSize(30, 30)
@@ -31,33 +33,10 @@ class PushButton(QPushButton):
             self.setText(text)
 
 
-class Slider(QSlider):
-    value = pyqtSignal(int)
-
-    def __init__(self, value=100):
-        super(Slider, self).__init__()
-        self.setOrientation(Qt.Horizontal)
-        self.setFixedWidth(100)
-        self.setValue(value)
-
-    def mousePressEvent(self, event):
-        self.updateValue(event.pos())
-
-    def mouseMoveEvent(self, event):
-        self.updateValue(event.pos())
-
-    def wheelEvent(self, event):  # 把进度条的滚轮事件去了 用啥子滚轮
-        pass
-
-    def updateValue(self, QPoint):
-        value = QPoint.x()
-        if value > 100: value = 100
-        elif value < 0: value = 0
-        self.setValue(value)
-        self.value.emit(value)
-
-
 class GetMediaURL(QThread):
+    """获取直播推流并缓存
+    TODO: 换用 bilibili_api.live.get_room_play_url(room_id)
+    """
     cacheName = pyqtSignal(str)
     copyFile = pyqtSignal(str)
     downloadError = pyqtSignal()
@@ -129,6 +108,7 @@ class GetMediaURL(QThread):
 
 
 class VideoFrame(QFrame):
+    """视频播放容器"""
     rightClicked = pyqtSignal(QEvent)
     leftClicked = pyqtSignal()
     doubleClicked = pyqtSignal()
@@ -148,6 +128,7 @@ class VideoFrame(QFrame):
 
 
 class ExportCache(QThread):
+    """导出缓存的视频"""
     finish = pyqtSignal(list)
 
     def __init__(self):
@@ -173,6 +154,7 @@ class ExportCache(QThread):
 
 
 class ExportTip(QWidget):
+    """导出提示"""
     def __init__(self):
         super(ExportTip, self).__init__()
         self.resize(600, 100)
@@ -180,6 +162,9 @@ class ExportTip(QWidget):
 
 
 class VideoWidget(QFrame):
+    """
+    视频播放窗口
+    """
     mutedChanged = pyqtSignal(list)  # 按下静音按钮
     volumeChanged = pyqtSignal(list)  # 音量滑条改变
     addMedia = pyqtSignal(list)  # 发送新增的直播
