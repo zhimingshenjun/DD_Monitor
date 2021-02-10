@@ -1,9 +1,9 @@
-'''
+"""
 DD监控室主界面进程 包含对所有子页面的初始化、排版管理
 同时卡片和播放窗口的交互需要通过主界面线程通信
 以及软件启动和退出后的一些操作
 新增全局鼠标坐标跟踪 用于刷新鼠标交互效果
-'''
+"""
 import log
 # 找不到 dll
 # https://stackoverflow.com/questions/54110504/dynlib-dll-was-no-found-when-the-application-was-frozen-when-i-make-a-exe-fil
@@ -25,6 +25,7 @@ from ReportException import thraedingExceptionHandler, uncaughtExceptionHandler,
 from danmu import TextOpation, ToolButton
 
 
+# 程序所在路径
 application_path = ""
 
 
@@ -89,6 +90,7 @@ class ScrollArea(QScrollArea):
 
 
 class StartLiveWindow(QWidget):
+    """开播提醒弹窗"""
     def __init__(self):
         super(StartLiveWindow, self).__init__()
         self.setWindowTitle('开播提醒')
@@ -110,6 +112,7 @@ class StartLiveWindow(QWidget):
 
 
 class CacheSetting(QWidget):
+    """缓存设置窗口"""
     setting = pyqtSignal(list)
 
     def __init__(self):
@@ -144,6 +147,7 @@ class CacheSetting(QWidget):
 
 
 class Version(QWidget):
+    """版本说明窗口"""
     def __init__(self):
         super(Version, self).__init__()
         self.resize(350, 150)
@@ -168,6 +172,7 @@ class Version(QWidget):
 
 
 class HotKey(QWidget):
+    """热键说明窗口"""
     def __init__(self):
         super(HotKey, self).__init__()
         self.resize(350, 150)
@@ -179,6 +184,7 @@ class HotKey(QWidget):
 
 
 class DumpConfig(QThread):
+    """导出配置"""
     def __init__(self, config):
         super(DumpConfig, self).__init__()
         self.config = config
@@ -206,6 +212,7 @@ class DumpConfig(QThread):
 
 
 class CheckDanmmuProvider(QThread):
+    """检查弹幕服务器域名解析状态"""
     def __init__(self):
         super(CheckDanmmuProvider,self).__init__()
     
@@ -218,7 +225,9 @@ class CheckDanmmuProvider(QThread):
             logging.error("解析弹幕域名失败")
             logging.error(str(e))
 
+
 class MainWindow(QMainWindow):
+    """主窗口"""
     def __init__(self, cacheFolder, progressBar, progressText):
         super(MainWindow, self).__init__()
         self.setWindowTitle('DD监控室')
@@ -1097,6 +1106,7 @@ class MainWindow(QMainWindow):
             self.startLiveWindow.tipLabel.setText(startLivers)
             self.startLiveWindow.show()
             self.startLiveWindow.hideTimer.start()
+
 
 # 程序入口点
 if __name__ == '__main__':

@@ -1,3 +1,6 @@
+"""
+赞助页弹窗
+"""
 import requests
 from PyQt5.QtWidgets import * 	# QAction,QFileDialog
 from PyQt5.QtGui import *		# QIcon,QPixmap
@@ -5,6 +8,7 @@ from PyQt5.QtCore import * 		# QSize
 
 
 class DownloadImage(QThread):
+    """下载图片 - 二维码"""
     img = pyqtSignal(QPixmap)
 
     def __init__(self):
@@ -20,6 +24,7 @@ class DownloadImage(QThread):
 
 
 class thankToBoss(QThread):
+    """获取感谢名单"""
     bossList = pyqtSignal(list)
 
     def __init__(self, parent=None):
@@ -42,6 +47,7 @@ class thankToBoss(QThread):
 
 
 class pay(QDialog):
+    """投喂弹窗"""
     def __init__(self):
         super().__init__()
         self.setWindowTitle('赞助和支持')
