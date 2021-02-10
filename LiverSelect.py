@@ -864,7 +864,7 @@ class CollectLiverInfo(QThread):
                             print(str(e))
                 if liverInfo:
                     self.liverInfo.emit(liverInfo)
-                time.sleep(20)  # 冷却时间
+                time.sleep(60)  # 冷却时间
             except Exception as e:
                 logging.error(str(e))
 
@@ -974,16 +974,16 @@ class LiverPanel(QWidget):
                 for cover in self.coverList:
                     if cover.roomID == info[1]:
                         cover.updateLabel(info)
-        if roomIDToRefresh:
-            self.refreshIDList.emit(roomIDToRefresh)
-            self.refreshPanel()  # 修改刷新策略 只有当有主播直播状态发生变化后才会刷新 降低闪退风险
         if roomIDStartLive:
             self.startLiveList.emit(roomIDStartLive)  # 发送开播列表
-        elif firstRefresh:
-            self.refreshPanel()
-        elif not self.refreshCount % 3:  # 每20s x 3 = 1分钟强制刷新一次
-            self.refreshPanel()
-        # self.refreshPanel()
+        # if roomIDToRefresh:
+        #     self.refreshIDList.emit(roomIDToRefresh)
+        #     self.refreshPanel()  # 修改刷新策略 只有当有主播直播状态发生变化后才会刷新 降低闪退风险
+        # elif firstRefresh:
+        #     self.refreshPanel()
+        # elif not self.refreshCount % 3:  # 每20s x 3 = 1分钟强制刷新一次
+        #     self.refreshPanel()
+        self.refreshPanel()
 
     def addCoverToPlayer(self, info):
         self.addToWindow.emit(info)

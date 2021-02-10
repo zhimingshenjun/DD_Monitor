@@ -149,7 +149,7 @@ class Version(QWidget):
         self.resize(350, 150)
         self.setWindowTitle('当前版本')
         layout = QGridLayout(self)
-        layout.addWidget(QLabel('DD监控室 v2.1正式版'), 0, 0, 1, 2)
+        layout.addWidget(QLabel('DD监控室 v2.3正式版'), 0, 0, 1, 2)
         layout.addWidget(QLabel('by 神君Channel'), 1, 0, 1, 2)
         layout.addWidget(QLabel('特别鸣谢：大锅饭 美东矿业 inkydragon'), 2, 0, 1, 2)
         releases_url = QLabel('')
@@ -255,7 +255,8 @@ class MainWindow(QMainWindow):
         # 如果能成功读取到config文件
         if self.config:  
             while len(self.config['player']) < 9:
-                self.config['player'].append(0)
+                self.config['player'].append('0')
+            self.config['player'] = list(map(str, self.config['player']))
             if type(self.config['roomid']) == list:
                 roomIDList = self.config['roomid']
                 self.config['roomid'] = {}
@@ -1023,7 +1024,8 @@ class MainWindow(QMainWindow):
                     config['layout'] = self.config['layout']  # 保持最新layout
                     self.config = config
                     while len(self.config['player']) < 9:
-                        self.config['player'].append(0)
+                        self.config['player'].append('0')
+                    self.config['player'] = list(map(str, self.config['player']))
                     if type(self.config['roomid']) == list:
                         roomIDList = self.config['roomid']
                         self.config['roomid'] = {}
