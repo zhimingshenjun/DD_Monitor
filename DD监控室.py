@@ -1020,7 +1020,6 @@ class MainWindow(QMainWindow):
                     logging.exception('json 配置导入失败')
                     config = {}
                 if config:  # 如果能成功读取到config文件
-                    # config['roomid'].update(self.config['roomid'])  # 添加现有直播间
                     config['layout'] = self.config['layout']  # 保持最新layout
                     self.config = config
                     while len(self.config['player']) < 9:
@@ -1031,6 +1030,8 @@ class MainWindow(QMainWindow):
                         self.config['roomid'] = {}
                         for roomID in roomIDList:
                             self.config['roomid'][roomID] = False
+                    if '0' in self.config['roomid']:  # 过滤0房间号
+                        del self.config['roomid']['0']
                     if 'quality' not in self.config:
                         self.config['quality'] = [80] * 9
                     if 'audioChannel' not in self.config:
@@ -1042,6 +1043,20 @@ class MainWindow(QMainWindow):
                             self.config['danmu'][index] = [textSetting, 20, 1, 7, 0, '【 [ {']
                     if 'hardwareDecode' not in self.config:
                         self.config['hardwareDecode'] = True
+                    if 'maxCacheSize' not in self.config:
+                        self.config['maxCacheSize'] = 2048000
+                        logging.warning('最大缓存没有被设置，使用默认1G')
+                    if 'saveCachePath' not in self.config:
+                        self.config['saveCachePath'] = ''
+                        logging.warning('默认缓存备份路径为空 即自动清空')
+                    if 'startWithDanmu' not in self.config:
+                        self.config['startWithDanmu'] = True
+                        logging.warning('启动时加载弹幕没有被设置，默认加载')
+                    if 'showStartLive' not in self.config:
+                        self.config['showStartLive'] = True
+                    for danmuConfig in self.config['danmu']:
+                        if len(danmuConfig) == 6:
+                            danmuConfig.append(10)
                     self.liverPanel.addLiverRoomList(self.config['roomid'])
                     QMessageBox.information(self, '导入预设', '导入完成', QMessageBox.Ok)
 
