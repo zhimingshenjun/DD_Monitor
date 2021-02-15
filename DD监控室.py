@@ -83,10 +83,13 @@ class ScrollArea(QScrollArea):
             self.multipleTimes.emit(multiple)
 
 
-# class DockWidget(QDockWidget):
-#     def __init__(self, title):
-#         super(DockWidget, self).__init__()
-#         self.setWindowTitle(title)
+class DockWidget(QDockWidget):
+    def __init__(self, title):
+        super(DockWidget, self).__init__()
+        self.setWindowTitle(title)
+        self.setObjectName(f'dock-{title}')
+        self.setFloating(False)
+        self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea | Qt.TopDockWidgetArea)
 
 
 class StartLiveWindow(QWidget):
@@ -382,11 +385,8 @@ class MainWindow(QMainWindow):
         # 设置所有播放器布局
         self.setPlayer()
 
-        self.controlDock = QDockWidget('控制条')
-        self.controlDock.setObjectName('控制条')
+        self.controlDock = DockWidget('控制条')
         self.controlDock.setFixedWidth(178)
-        self.controlDock.setFloating(False)
-        self.controlDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea | Qt.TopDockWidgetArea)
         self.addDockWidget(Qt.TopDockWidgetArea, self.controlDock)
         self.controlWidget = ControlWidget()
         self.controlWidget.heightValue.connect(self.showAddButton)
@@ -446,11 +446,8 @@ class MainWindow(QMainWindow):
         self.scrollArea = ScrollArea()
         self.scrollArea.setStyleSheet('border-width:0px')
         # self.scrollArea.setMinimumHeight(111)
-        self.cardDock = QDockWidget('卡片槽')
-        self.cardDock.setObjectName('卡片槽')
+        self.cardDock = DockWidget('卡片槽')
         self.cardDock.setWidget(self.scrollArea)
-        self.cardDock.setFloating(False)
-        self.cardDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea | Qt.TopDockWidgetArea)
         self.addDockWidget(Qt.TopDockWidgetArea, self.cardDock)
 
         # self.controlBarLayout.addWidget(self.scrollArea, 3, 0, 1, 5)
