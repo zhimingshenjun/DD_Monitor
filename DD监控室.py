@@ -383,6 +383,7 @@ class MainWindow(QMainWindow):
         self.setPlayer()
 
         self.controlDock = QDockWidget('控制条')
+        self.controlDock.setObjectName('控制条')
         self.controlDock.setFixedWidth(178)
         self.controlDock.setFloating(False)
         self.controlDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea | Qt.TopDockWidgetArea)
@@ -446,6 +447,7 @@ class MainWindow(QMainWindow):
         self.scrollArea.setStyleSheet('border-width:0px')
         # self.scrollArea.setMinimumHeight(111)
         self.cardDock = QDockWidget('卡片槽')
+        self.cardDock.setObjectName('卡片槽')
         self.cardDock.setWidget(self.scrollArea)
         self.cardDock.setFloating(False)
         self.cardDock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea | Qt.TopDockWidgetArea)
@@ -543,6 +545,7 @@ class MainWindow(QMainWindow):
         progressText.setText('设置UI...')
         self.checkDanmmuProvider = CheckDanmmuProvider()
         self.checkDanmmuProvider.start()
+        self.loadDockLayout()
         logging.info('UI构造完毕')
 
     def setPlayer(self):
@@ -941,6 +944,7 @@ class MainWindow(QMainWindow):
             videoWidget.checkPlaying.stop()
             videoWidget.mediaStop(deleteMedia=False)  # 不要清除播放窗记录
             videoWidget.close()
+        self.saveDockLayout()
         self.dumpConfig.start()
 
     def openLayoutSetting(self):
@@ -999,6 +1003,20 @@ class MainWindow(QMainWindow):
             for videoWidget in self.videoWidgetList:
                 videoWidget.fullScreen = True
             self.showFullScreen()
+
+    def saveDockLayout(self):
+        self.config['geometry'] = str(self.saveGeometry().toBase64(), 'ASCII')
+        self.config['windowState'] = str(self.saveState().toBase64(), 'ASCII')
+        logging.info(f'save Window layout.')
+
+    def loadDockLayout(self):
+        if 'geometry' in self.config:
+            geometry = QByteArray().fromBase64(self.config['geometry'].encode('ASCII'))
+            self.restoreGeometry(geometry)
+        if 'windowState' in self.config:
+            windowState = QByteArray().fromBase64(self.config['windowState'].encode('ASCII'))
+            self.restoreState(windowState)
+        logging.info(f'restore Window layout.')
 
     def exportConfig(self):
         self.savePath = QFileDialog.getSaveFileName(self, "选择保存路径", 'DD监控室预设', "*.json")[0]
