@@ -446,14 +446,24 @@ class GetFollows(QThread):
 
     def run(self):
         if self.uid:
-            followsIDs = []
+            followsIDs = set()
             roomIDList = []
+            burp0_headers = {"Connection": "close",
+                             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36 Edg/88.0.705.68",
+                             "DNT": "1", "Accept": "*/*", "Sec-Fetch-Site": "same-site",
+                             "Sec-Fetch-Mode": "no-cors", "Sec-Fetch-Dest": "script",
+                             "Referer": "https://space.bilibili.com/", "Accept-Encoding": "gzip, deflate",
+                             "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6"}
             for p in range(1, 6):
-                r = requests.get(r'https://api.bilibili.com/x/relation/followings?vmid=%s&pn=%s' % (self.uid, p))
-                followList = json.loads(r.text)['data']['list']
-                if followList:
-                    for i in followList:
-                        followsIDs.append(i['mid'])
+                urls = [f"https://api.bilibili.com:443/x/relation/followings?vmid={self.uid}&pn={p}&ps=50&order=desc&jsonp=jsonp",
+                        f"https://api.bilibili.com:443/x/relation/followings?vmid={self.uid}&pn={p}&ps=50&order=asc&jsonp=jsonp"]
+                for burp0_url in urls:
+                    r = requests.get(burp0_url, headers=burp0_headers)
+                    followList = json.loads(r.text)['data']['list']
+                    if followList:
+                        for i in followList:
+                            followsIDs.add(i['mid'])
+            followsIDs = list(followsIDs)
             if followsIDs:
                 data = json.dumps({'uids': followsIDs})
                 r = requests.post(r'https://api.live.bilibili.com/room/v1/Room/get_status_info_by_uids', data=data)
@@ -593,7 +603,7 @@ class AddLiverRoomWidget(QWidget):
         followsLayout = QGridLayout(followsPage)
         followsLayout.setContentsMargins(0, 0, 0, 0)
         followsLayout.addWidget(QLabel(), 0, 2, 1, 1)
-        followsLayout.addWidget(QLabel('自动添加你关注的up直播间 （只能拉取最近关注的100名）'), 0, 3, 1, 3)
+        followsLayout.addWidget(QLabel('自动添加你关注的up直播间 （只能拉取最近关注的500名）'), 0, 3, 1, 3)
         self.uidEdit = QLineEdit()
         self.uidEdit.setPlaceholderText('请输入你的uid')
         self.uidEdit.setMinimumWidth(120)
@@ -609,8 +619,8 @@ class AddLiverRoomWidget(QWidget):
         self.followsTable.verticalScrollBar().installEventFilter(self)
         self.followsTable.verticalHeader().sectionClicked.connect(self.followLiverAdd)
         self.followsTable.setColumnCount(3)
-        self.followsTable.setRowCount(100)
-        self.followsTable.setVerticalHeaderLabels(['添加'] * 100)
+        self.followsTable.setRowCount(500)
+        self.followsTable.setVerticalHeaderLabels(['添加'] * 500)
         self.followsTable.setHorizontalHeaderLabels(['主播名', '直播间标题', '直播间房号'])
         self.followsTable.setColumnWidth(0, 130)
         self.followsTable.setColumnWidth(1, 240)
