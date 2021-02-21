@@ -3,7 +3,7 @@ DD监控室最重要的模块之一 视频播放窗口 现已全部从QMediaPlay
 包含视频缓存播放、音量管理、弹幕窗
 遇到不确定的播放状态就调用MediaReload()函数 我已经在里面写好了全部的处理 会自动获取直播间状态并进行对应的刷新操作
 """
-import requests, json, os, time, shutil, random
+import requests, os, time, shutil, random
 from PyQt5.QtWidgets import * 	# QAction,QFileDialog
 from PyQt5.QtGui import *		# QIcon,QPixmap
 from PyQt5.QtCore import * 		# QSize
@@ -68,7 +68,7 @@ class GetMediaURL(QThread):
         api = r'https://api.live.bilibili.com/room/v1/Room/playUrl?cid=%s&platform=web&qn=%s' % (self.roomID, self.quality)
         r = requests.get(api)
         try:
-            url = json.loads(r.text)['data']['durl'][0]['url']
+            url = r.json()['data']['durl'][0]['url']
             fileName = '%s/%s.flv' % (self.cacheFolder, self.id)
             download = requests.get(url, stream=True, headers=header)
             logging.debug(download.headers)
@@ -939,7 +939,7 @@ class VideoWidget(QFrame):
             self.uname = '未定义'
         else:
             r = requests.get(r'https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom?room_id=%s' % self.roomID)
-            data = json.loads(r.text)
+            data = r.json()
             if data['message'] == '房间已加密':
                 self.title = '房间已加密'
                 self.uname = '房号: %s' % self.roomID
