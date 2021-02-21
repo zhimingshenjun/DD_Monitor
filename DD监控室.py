@@ -852,19 +852,14 @@ class MainWindow(QMainWindow):
     def openCacheSetting(self):
         self.cacheSetting.hide()
         self.cacheSetting.show()
-        # userInputCache, okPressed = QInputDialog.getInt(self,"设置最大缓存大小","最大缓存(GB)",
-        #     int(float(self.config['maxCacheSize']) / (10 ** 6)), 1, 4, 1)
-        # if okPressed:
-        #     self.config['maxCacheSize'] = int(userInputCache * 10 ** 6)
-        #     self.dumpConfig.start()
-        #     msg = QMessageBox()
-        #     msg.setIcon(QMessageBox.Information)
-        #     msg.setText("缓存大小设置成功，重启监控室后生效。")
-        #     msg.exec()
 
     def setCache(self, setting):
         maxCache, savePath = setting
-        self.config['maxCacheSize'] = int(maxCache) * 1024000
+        intergerMaxCache = int(maxCache)
+        if intergerMaxCache <= 0:
+            QMessageBox.warning(self,'大小错误' ,'缓存大小不能小于为0GB!', QMessageBox.Ok )
+            return
+        self.config['maxCacheSize'] = intergerMaxCache  * 1024000
         self.config['saveCachePath'] = savePath
         self.dumpConfig.start()
         QMessageBox.information(self, '缓存设置更改', '设置成功 重启监控室后生效', QMessageBox.Ok)
