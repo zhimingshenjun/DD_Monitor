@@ -16,7 +16,7 @@ class DownloadImage(QThread):
 
     def run(self):
         try:
-            r = requests.get(r'http://i0.hdslb.com/bfs/album/a4d2644425634cb8568570b77f4ba45f2b84fe67.png')
+            r = requests.get(r'https://i0.hdslb.com/bfs/album/a4d2644425634cb8568570b77f4ba45f2b84fe67.png')
             img = QPixmap.fromImage(QImage.fromData(r.content))
             self.img.emit(img)
         except Exception as e:
