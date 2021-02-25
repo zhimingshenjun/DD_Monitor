@@ -41,7 +41,7 @@ def loggingSystemInfo():
     systemCmd = ""
     gpuCmd = ""
     if platform.system() == 'Windows':
-        systemCmd = r"C:\Windows\System32\systeminfo.exe"
+        systemCmd = r"\u C:\Windows\System32\systeminfo.exe"
         wmi_exe = r"C:\Windows\System32\wbem\WMIC.exe"
         # cmd 下运行 "wmic PATH win32_VideoController GET /?" 查看可查询的参数列表
         gpu_property_list = "AdapterCompatibility, Caption, DeviceID, DriverDate, DriverVersion, VideoModeDescription"
