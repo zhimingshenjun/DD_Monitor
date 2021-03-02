@@ -82,6 +82,9 @@ class remoteThread(QThread):
                 jd = json.loads(data[16:].decode('utf-8', errors='ignore'))
                 if jd['cmd'] == 'DANMU_MSG':
                     self.message.emit(jd['info'][1])
+                elif jd['cmd'] == 'SUPER_CHAT_MESSAGE':
+                    d = jd['data']
+                    self.message.emit('\nSC: ¥%s\n【%s】\n' % (d['price'], d['message']))
                 # elif jd['cmd'] == 'SEND_GIFT':
                 #     d = jd['data']
                 #     self.message.emit('%s投喂了%s个%s' % (d['uname'], d['num'], d['giftName']))
