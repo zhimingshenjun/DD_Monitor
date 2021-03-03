@@ -41,7 +41,7 @@ def loggingSystemInfo():
     systemCmd = ""
     gpuCmd = ""
     if platform.system() == 'Windows':
-        systemCmd = r"C:\Windows\System32\systeminfo.exe"
+        systemCmd = r"\u C:\Windows\System32\systeminfo.exe"
         wmi_exe = r"C:\Windows\System32\wbem\WMIC.exe"
         # cmd 下运行 "wmic PATH win32_VideoController GET /?" 查看可查询的参数列表
         gpu_property_list = "AdapterCompatibility, Caption, DeviceID, DriverDate, DriverVersion, VideoModeDescription"
@@ -70,7 +70,7 @@ def showFaultDialog(err_type, err_value, tb):
     msg = QMessageBox()
     msg.setIcon(QMessageBox.Critical)
     msg.setText("不好，出现了一个问题: %s" % err_type)
-    msg.setInformativeText("运行中出现了%s故障,请到logs文件夹中找到log-%s.txt并上报。" % (err_value, datetime.datetime.today().strftime('%Y-%m-%d')))
+    msg.setInformativeText("运行中出现了%s故障,日志已保存在logs文件夹中的log-%s.txt文件内。" % (err_value, datetime.datetime.today().strftime('%Y-%m-%d')))
     msg.setWindowTitle("DD监控室出现了问题")
     msg.setDetailedText("Traceback:\n%s" % (" ".join(traceback.format_tb(tb))))
     msg.setStandardButtons(QMessageBox.Ok)
