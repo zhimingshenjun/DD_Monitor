@@ -67,6 +67,7 @@ def loggingSystemInfo():
 
 
 def showFaultDialog(err_type, err_value, tb):
+    return None  # 跳过报错 没精力改了
     msg = QMessageBox()
     msg.setIcon(QMessageBox.Critical)
     msg.setText("不好，出现了一个问题: %s" % err_type)

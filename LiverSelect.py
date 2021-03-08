@@ -141,8 +141,8 @@ class RecordThread(QThread):
     def run(self):
         self.reconnectCount = 0
         api = r'https://api.live.bilibili.com/room/v1/Room/playUrl?cid=%s&platform=web&qn=10000' % self.roomID
-        r = requests.get(api)
         try:
+            r = requests.get(api)
             url = json.loads(r.text)['data']['durl'][0]['url']
             download = requests.get(url, stream=True, headers=header)
             self.recordToken = True
@@ -174,14 +174,17 @@ class DownloadImage(QThread):
         self.url = url
 
     def run(self):
-        if self.W == 60:
-            r = requests.get(self.url + '@100w_100h.jpg')
-        else:
-            r = requests.get(self.url)
-        img = QPixmap.fromImage(QImage.fromData(r.content))
-        self.img.emit(img.scaled(self.W, self.H, Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
-        if self.keyFrame:
-            self.img_origin.emit(img)
+        try:
+            if self.W == 60:
+                r = requests.get(self.url + '@100w_100h.jpg')
+            else:
+                r = requests.get(self.url)
+            img = QPixmap.fromImage(QImage.fromData(r.content))
+            self.img.emit(img.scaled(self.W, self.H, Qt.IgnoreAspectRatio, Qt.SmoothTransformation))
+            if self.keyFrame:
+                self.img_origin.emit(img)
+        except Exception as e:
+            logging.error(str(e))
 
 
 class CoverLabel(QLabel):
@@ -896,7 +899,7 @@ class CollectLiverInfo(QThread):
                                     uname = ''
                                 liverInfo.append([None, str(roomID), uname])
                         except Exception as e:
-                            print(str(e))
+                            logging.error(str(e))
                 if liverInfo:
                     self.liverInfo.emit(liverInfo)
                 time.sleep(60)  # 冷却时间
