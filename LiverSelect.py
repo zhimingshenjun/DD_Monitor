@@ -398,8 +398,9 @@ class CoverLabel(QLabel):
             elif action == copyRoomID:
                 clipboard = QApplication.clipboard()
                 clipboard.setText(self.roomID)
-            elif action == addTo:
+            else:
                 for index, i in enumerate(addWindow):
+                    print(index, i)
                     if action == i:
                         self.addToWindow.emit([index, self.roomID])  # 添加至窗口 窗口 房号
                         break
