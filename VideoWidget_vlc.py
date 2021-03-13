@@ -885,7 +885,7 @@ class VideoWidget(QFrame):
 
     def copyCache(self, copyFile):
         title = self.oldTitle if self.oldTitle else self.title
-        for s in ['/', '\\', ':', '*', '"', '<', '>', '|', '？']:
+        for s in ['/', '\\', ':', '*', '"', '<', '>', '|', '?']:
             title = title.replace(s, '')
         uname = self.oldUname if self.oldUname else self.uname
         formatTime = time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime(time.time()))

@@ -156,7 +156,7 @@ class Version(QWidget):
         self.resize(350, 150)
         self.setWindowTitle('当前版本')
         layout = QGridLayout(self)
-        layout.addWidget(QLabel('DD监控室 v2.5正式版'), 0, 0, 1, 2)
+        layout.addWidget(QLabel('DD监控室 v2.6正式版'), 0, 0, 1, 2)
         layout.addWidget(QLabel('by 神君Channel'), 1, 0, 1, 2)
         layout.addWidget(QLabel('特别鸣谢：大锅饭 美东矿业 inkydragon'), 2, 0, 1, 2)
         releases_url = QLabel('')
@@ -266,8 +266,18 @@ class MainWindow(QMainWindow):
                             self.config = {}
         # 如果能成功读取到config文件
         if self.config:  
-            while len(self.config['player']) < 9:
+            while len(self.config['player']) < 16:
                 self.config['player'].append('0')
+            while len(self.config['volume']) < 16:
+                self.config['volume'].append(0)
+            while len(self.config['danmu']) < 16:
+                self.config['danmu'].append([True, 50, 1, 7, 0, "【 [ {", 10])
+            while len(self.config['muted']) < 16:
+                self.config['muted'].append(1)
+            while len(self.config['quality']) < 16:
+                self.config['quality'].append(80)
+            while len(self.config['audioChannel']) < 16:
+                self.config['audioChannel'].append(0)
             self.config['player'] = list(map(str, self.config['player']))
             if type(self.config['roomid']) == list:
                 roomIDList = self.config['roomid']
@@ -277,11 +287,11 @@ class MainWindow(QMainWindow):
             if '0' in self.config['roomid']:  # 过滤0房间号
                 del self.config['roomid']['0']
             if 'quality' not in self.config:
-                self.config['quality'] = [80] * 9
+                self.config['quality'] = [80] * 16
             if 'audioChannel' not in self.config:
-                self.config['audioChannel'] = [0] * 9
+                self.config['audioChannel'] = [0] * 16
             if 'translator' not in self.config:
-                self.config['translator'] = [True] * 9
+                self.config['translator'] = [True] * 16
             for index, textSetting in enumerate(self.config['danmu']):
                 if type(textSetting) == bool:
                     self.config['danmu'][index] = [textSetting, 20, 1, 7, 0, '【 [ {']
@@ -305,12 +315,12 @@ class MainWindow(QMainWindow):
             self.config = {
                 'roomid': {'21396545': False, '21402309': False, '22384516': False, '8792912': False},  # 置顶显示
                 'layout': [(0, 0, 1, 1), (0, 1, 1, 1), (1, 0, 1, 1), (1, 1, 1, 1)],
-                'player': ['0'] * 9,
-                'quality': [80] * 9,
-                'audioChannel': [0] * 9,
-                'muted': [1] * 9,
-                'volume': [50] * 9,
-                'danmu': [[True, 50, 1, 7, 0, '【 [ {', 10]] * 9,  # 显示,透明,横向,纵向,类型,同传字符,字体大小
+                'player': ['0'] * 16,
+                'quality': [80] * 16,
+                'audioChannel': [0] * 16,
+                'muted': [1] * 16,
+                'volume': [50] * 16,
+                'danmu': [[True, 50, 1, 7, 0, '【 [ {', 10]] * 16,  # 显示,透明,横向,纵向,类型,同传字符,字体大小
                 'globalVolume': 30,
                 'control': True,
                 'hardwareDecode': True,
@@ -344,7 +354,7 @@ class MainWindow(QMainWindow):
         self.videoWidgetList = []
         self.popVideoWidgetList = []
         vlcProgressCounter = 1
-        for i in range(9):
+        for i in range(16):
             volume = self.config['volume'][i]
             progressText.setText('设置第%s个主层播放器...' % str(i + 1))
             self.videoWidgetList.append(VideoWidget(i, volume, cacheFolder, textSetting=self.config['danmu'][i],
@@ -371,7 +381,7 @@ class MainWindow(QMainWindow):
             self.videoWidgetList[i].slider.setValue(self.config['volume'][i])
             self.videoWidgetList[i].quality = self.config['quality'][i]
             self.videoWidgetList[i].audioChannel = self.config['audioChannel'][i]
-            self.popVideoWidgetList.append(VideoWidget(i + 9, volume, cacheFolder, True, '悬浮窗', [1280, 720],
+            self.popVideoWidgetList.append(VideoWidget(i + 16, volume, cacheFolder, True, '悬浮窗', [1280, 720],
                                                        maxCacheSize=self.config['maxCacheSize'],
                                                        saveCachePath = self.config['saveCachePath'],
                                                        startWithDanmu=self.config['startWithDanmu'],
@@ -381,7 +391,7 @@ class MainWindow(QMainWindow):
             progressBar.setValue(vlcProgressCounter)
             progressText.setText('设置第%s个悬浮窗播放器...' % str(i + 1))
             app.processEvents()
-            logging.info("VLC设置完毕 %s / 9" % str(i + 1))
+            logging.info("VLC设置完毕 %s / 16" % str(i + 1))
         # 设置所有播放器布局
         self.setPlayer()
 
@@ -560,7 +570,7 @@ class MainWindow(QMainWindow):
         self.setMediaTimer.start(10)  # vlc
 
     def setMedia(self):
-        if self.videoIndex == 9:
+        if self.videoIndex == 16:
             self.setMediaTimer.stop()
         elif self.videoIndex < len(self.config['layout']):
             # pass
@@ -716,7 +726,7 @@ class MainWindow(QMainWindow):
         self.globalMuteToken = not self.globalMuteToken
         for videoWidget in self.videoWidgetList:
             videoWidget.mediaMute(force)
-        self.config['muted'] = [force] * 9
+        self.config['muted'] = [force] * 16
         # self.dumpConfig.start()
 
     def globalSetVolume(self, value):
@@ -724,7 +734,7 @@ class MainWindow(QMainWindow):
             videoWidget.player.audio_set_volume(int(value * videoWidget.volumeAmplify))
             videoWidget.volume = value
             videoWidget.slider.setValue(value)
-        self.config['volume'] = [value] * 9
+        self.config['volume'] = [value] * 16
         self.config['globalVolume'] = value
         # self.dumpConfig.start()
 
@@ -799,14 +809,14 @@ class MainWindow(QMainWindow):
             if not videoWidget.isHidden():  # 窗口没有被隐藏
                 videoWidget.quality = quality
                 videoWidget.mediaReload()
-        self.config['quality'] = [quality] * 9
+        self.config['quality'] = [quality] * 16
         self.dumpConfig.start()
 
     def globalAudioChannel(self, audioChannel):
         for videoWidget in self.videoWidgetList + self.popVideoWidgetList:
             videoWidget.audioChannel = audioChannel
             videoWidget.player.audio_set_channel(audioChannel)
-        self.config['audioChannel'] = [audioChannel] * 9
+        self.config['audioChannel'] = [audioChannel] * 16
         # self.dumpConfig.start()
 
     def setDecode(self, hardwareDecodeToken):
@@ -1041,7 +1051,7 @@ class MainWindow(QMainWindow):
                 if config:  # 如果能成功读取到config文件
                     config['layout'] = self.config['layout']  # 保持最新layout
                     self.config = config
-                    while len(self.config['player']) < 9:
+                    while len(self.config['player']) < 16:
                         self.config['player'].append('0')
                     self.config['player'] = list(map(str, self.config['player']))
                     if type(self.config['roomid']) == list:
@@ -1052,11 +1062,11 @@ class MainWindow(QMainWindow):
                     if '0' in self.config['roomid']:  # 过滤0房间号
                         del self.config['roomid']['0']
                     if 'quality' not in self.config:
-                        self.config['quality'] = [80] * 9
+                        self.config['quality'] = [80] * 16
                     if 'audioChannel' not in self.config:
-                        self.config['audioChannel'] = [0] * 9
+                        self.config['audioChannel'] = [0] * 16
                     if 'translator' not in self.config:
-                        self.config['translator'] = [True] * 9
+                        self.config['translator'] = [True] * 16
                     for index, textSetting in enumerate(self.config['danmu']):
                         if type(textSetting) == bool:
                             self.config['danmu'][index] = [textSetting, 20, 1, 7, 0, '【 [ {']
@@ -1094,10 +1104,10 @@ class MainWindow(QMainWindow):
 
     def closePopWindow(self, info):
         id, roomID = info
-        if not self.videoWidgetList[id - 9].isHidden() and roomID != '0' and roomID:  # 房间号有效
-            self.videoWidgetList[id - 9].roomID = roomID
-            self.videoWidgetList[id - 9].mediaReload()
-            self.config['player'][id - 9] = roomID
+        if not self.videoWidgetList[id - 16].isHidden() and roomID != '0' and roomID:  # 房间号有效
+            self.videoWidgetList[id - 16].roomID = roomID
+            self.videoWidgetList[id - 16].mediaReload()
+            self.config['player'][id - 16] = roomID
             self.liverPanel.updatePlayingStatus(self.config['player'])
             self.dumpConfig.start()
 
@@ -1184,7 +1194,7 @@ if __name__ == '__main__':
     # 欢迎页面
     splash = QSplashScreen(QPixmap(os.path.join(application_path, 'utils/splash.jpg')), Qt.WindowStaysOnTopHint)
     progressBar = QProgressBar(splash)
-    progressBar.setMaximum(18) # 9 * 2个播放器, 0 - 17 index
+    progressBar.setMaximum(32) # 16 * 2个播放器, 0 - 17 index
     progressBar.setGeometry(0, splash.height() - 20, splash.width(), 20)
     progressText = QLabel(splash)
     progressText.setText("加载中...")
