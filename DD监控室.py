@@ -491,6 +491,8 @@ class MainWindow(QMainWindow):
         globalQualityMenu.addAction(highQualityAction)
         lowQualityAction = QAction('流畅', self, triggered=lambda: self.globalQuality(80))
         globalQualityMenu.addAction(lowQualityAction)
+        onlyAudio = QAction('仅播声音', self, triggered=lambda: self.globalQuality(-1))
+        globalQualityMenu.addAction(onlyAudio)
         globalAudioMenu = self.optionMenu.addMenu('全局音效 ►')
         audioOriginAction = QAction('原始音效', self, triggered=lambda: self.globalAudioChannel(0))
         globalAudioMenu.addAction(audioOriginAction)
