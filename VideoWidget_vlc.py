@@ -235,7 +235,7 @@ class VideoWidget(QFrame):
     closePopWindow = pyqtSignal(list)  # 关闭悬浮窗
 
     def __init__(self, id, volume, cacheFolder, top=False, title='', resize=[],
-                 textSetting=[True, 20, 2, 6, 0, '【 [ {', 10], maxCacheSize=2048000,
+                 textSetting=[True, 20, 2, 6, 0, '【 [ {', 10, 0], maxCacheSize=2048000,
                  saveCachePath='', startWithDanmu=True, hardwareDecode=True):
         super(VideoWidget, self).__init__()
         self.setAcceptDrops(True)
@@ -326,6 +326,11 @@ class VideoWidget(QFrame):
             self.textSetting[6])
         self.textBrowser.optionWidget.fontSizeCombox.currentIndexChanged.connect(
             self.setFontSize)
+        self.setMsgsBrowser(self.textSetting[7])
+        self.textBrowser.optionWidget.showEnterRoom.setCurrentIndex(
+            self.textSetting[7])  # 设置礼物和进入提示窗口
+        self.textBrowser.optionWidget.showEnterRoom.currentIndexChanged.connect(
+            self.setMsgsBrowser)
 
         self.textBrowser.closeSignal.connect(self.closeDanmu)
         self.textBrowser.moveSignal.connect(self.moveTextBrowser)
@@ -495,6 +500,8 @@ class VideoWidget(QFrame):
             'background-color:#%s' % color)
         self.textBrowser.transBrowser.setStyleSheet(
             'background-color:#%s' % color)
+        self.textBrowser.msgsBrowser.setStyleSheet(
+            'background-color:#%s' % color)
         self.setDanmu.emit()
 
     def setHorizontalPercent(self, index):  # 设置弹幕框水平宽度
@@ -514,6 +521,7 @@ class VideoWidget(QFrame):
         #     self.textBrowser.transBrowser.setFont(QFont('Microsoft JhengHei', 10, QFont.Bold))
         self.textBrowser.textBrowser.verticalScrollBar().setValue(100000000)
         self.textBrowser.transBrowser.verticalScrollBar().setValue(100000000)
+        self.textBrowser.msgsBrowser.verticalScrollBar().setValue(100000000)
         self.setDanmu.emit()
 
     def setVerticalPercent(self, index):  # 设置弹幕框垂直高度
@@ -524,6 +532,7 @@ class VideoWidget(QFrame):
                                 self.height() * self.vertPercent)
         self.textBrowser.textBrowser.verticalScrollBar().setValue(100000000)
         self.textBrowser.transBrowser.verticalScrollBar().setValue(100000000)
+        self.textBrowser.msgsBrowser.verticalScrollBar().setValue(100000000)
         self.setDanmu.emit()
 
     def setTranslateBrowser(self, index):
@@ -541,6 +550,16 @@ class VideoWidget(QFrame):
             self.width() * self.horiPercent, self.height() * self.vertPercent)
         self.setDanmu.emit()
 
+    def setMsgsBrowser(self, index):
+        self.textSetting[7] = index
+        if index < 3:  # 显示弹幕和同传
+            self.textBrowser.msgsBrowser.show()
+        elif index == 3:  # 只显示弹幕
+            self.textBrowser.msgsBrowser.hide()
+        self.textBrowser.resize(
+            self.width() * self.horiPercent, self.height() * self.vertPercent)
+        self.setDanmu.emit()
+
     def setTranslateFilter(self, filterWords):
         self.textSetting[5] = filterWords
         self.filters = filterWords.split(' ')
@@ -551,6 +570,8 @@ class VideoWidget(QFrame):
         self.textBrowser.textBrowser.setFont(
             QFont('Microsoft JhengHei', index + 5, QFont.Bold))
         self.textBrowser.transBrowser.setFont(
+            QFont('Microsoft JhengHei', index + 5, QFont.Bold))
+        self.textBrowser.msgsBrowser.setFont(
             QFont('Microsoft JhengHei', index + 5, QFont.Bold))
         self.setDanmu.emit()
 
@@ -563,6 +584,7 @@ class VideoWidget(QFrame):
         self.textBrowser.resize(width, self.height() * self.vertPercent)
         self.textBrowser.textBrowser.verticalScrollBar().setValue(100000000)
         self.textBrowser.transBrowser.verticalScrollBar().setValue(100000000)
+        self.textBrowser.msgsBrowser.verticalScrollBar().setValue(100000000)
         self.moveTextBrowser()
 
     def moveEvent(self, QMoveEvent):  # 理论上给悬浮窗同步弹幕机用的moveEvent 但不生效 但是又不能删掉 不然交换窗口弹幕机有bug
@@ -642,6 +664,7 @@ class VideoWidget(QFrame):
                 self.mediaReload()
                 self.textBrowser.textBrowser.clear()
                 self.textBrowser.transBrowser.clear()
+                self.textBrowser.msgsBrowser.clear()
             elif 'exchange' in text:  # 交换窗口
                 fromID, fromRoomID = text.split(':')[1:]  # exchange:id:roomID
                 fromID = int(fromID)
@@ -670,6 +693,10 @@ class VideoWidget(QFrame):
         lowQuality = chooseQuality.addAction('流畅')
         if self.quality == 80:
             lowQuality.setIcon(self.style().standardIcon(
+                QStyle.SP_DialogApplyButton))
+        onlyAudio = chooseQuality.addAction('仅播声音')
+        if self.quality == -1:
+            onlyAudio.setIcon(self.style().standardIcon(
                 QStyle.SP_DialogApplyButton))
         chooseAudioChannel = menu.addMenu('选择音效 ►')
         chooseAudioOrigin = chooseAudioChannel.addAction('原始音效')
@@ -767,6 +794,10 @@ class VideoWidget(QFrame):
         elif action == lowQuality:
             self.changeQuality.emit([self.id, 80])
             self.quality = 80
+            self.mediaReload()
+        elif action == onlyAudio:
+            self.changeQuality.emit([self.id, -1])
+            self.quality = -1
             self.mediaReload()
         elif action == chooseAudioOrigin:
             self.changeAudioChannel.emit([self.id, 0])
@@ -1084,9 +1115,19 @@ class VideoWidget(QFrame):
 
     def playDanmu(self, message):
         token = False
+        if message.startswith("## ") or message.startswith("** "):
+            if self.textSetting[7] == 0:
+                self.textBrowser.msgsBrowser.append(message)
+            elif self.textSetting[7] == 1:
+                if message.startswith("** "):
+                    self.textBrowser.msgsBrowser.append(message)
+            elif self.textSetting[7] == 2:
+                if message.startswith("## "):
+                    self.textBrowser.msgsBrowser.append(message)
+            return
         for symbol in self.filters:
-            if symbol in message:
-                self.textBrowser.transBrowser.append(message)  # 同传不换行
+            if symbol in message[message.find(': ')+2:]:
+                self.textBrowser.transBrowser.append(message)
                 token = True
                 break
         if not token:
