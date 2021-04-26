@@ -24,6 +24,7 @@ class Bar(QLabel):
 
 class ToolButton(QToolButton):
     """标题栏按钮"""
+
     def __init__(self, icon):
         super(ToolButton, self).__init__()
         self.setStyleSheet('border-color:#CCCCCC')
@@ -33,7 +34,8 @@ class ToolButton(QToolButton):
 
 class TextOpation(QWidget):
     """弹幕机选项 - 弹出式窗口"""
-    def __init__(self, setting=[50, 1, 7, 0, '【 [ {', 10]):
+
+    def __init__(self, setting=[50, 1, 7, 0, '【 [ {', 10, 0]):
         super(TextOpation, self).__init__()
         self.resize(300, 300)
         self.setWindowTitle('弹幕窗设置')
@@ -54,13 +56,15 @@ class TextOpation(QWidget):
 
         layout.addWidget(QLabel('窗体横向占比'), 2, 0, 1, 1)
         self.horizontalCombobox = QComboBox()
-        self.horizontalCombobox.addItems(['%d' % x + '%' for x in range(10, 110, 10)])
+        self.horizontalCombobox.addItems(
+            ['%d' % x + '%' for x in range(10, 110, 10)])
         self.horizontalCombobox.setCurrentIndex(setting[1])
         layout.addWidget(self.horizontalCombobox, 2, 1, 1, 1)
 
         layout.addWidget(QLabel('窗体纵向占比'), 3, 0, 1, 1)
         self.verticalCombobox = QComboBox()
-        self.verticalCombobox.addItems(['%d' % x + '%' for x in range(10, 110, 10)])
+        self.verticalCombobox.addItems(
+            ['%d' % x + '%' for x in range(10, 110, 10)])
         self.verticalCombobox.setCurrentIndex(setting[2])
         layout.addWidget(self.verticalCombobox, 3, 1, 1, 1)
 
@@ -75,6 +79,12 @@ class TextOpation(QWidget):
         self.translateFitler.setText(setting[4])
         self.translateFitler.setFixedWidth(100)
         layout.addWidget(self.translateFitler, 5, 1, 1, 1)
+
+        layout.addWidget(QLabel('礼物和进入信息'), 6, 0, 1, 1)
+        self.showEnterRoom = QComboBox()
+        self.showEnterRoom.addItems(['显示礼物和进入信息', '只显示礼物', '只显示进入信息', '隐藏窗口'])
+        self.showEnterRoom.setCurrentIndex(setting[6])
+        layout.addWidget(self.showEnterRoom, 6, 1, 1, 1)
 
 
 class TextBrowser(QWidget):
@@ -102,17 +112,19 @@ class TextBrowser(QWidget):
         self.bar.moveSignal.connect(self.moveWindow)
         layout.addWidget(self.bar, 0, 0, 1, 10)
         # 弹幕选项菜单
-        self.optionButton = ToolButton(self.style().standardIcon(QStyle.SP_FileDialogDetailedView))
+        self.optionButton = ToolButton(
+            self.style().standardIcon(QStyle.SP_FileDialogDetailedView))
         self.optionButton.clicked.connect(self.optionWidget.show)  # 弹出设置菜单
         layout.addWidget(self.optionButton, 0, 8, 1, 1)
         # 关闭按钮
-        self.closeButton = ToolButton(self.style().standardIcon(QStyle.SP_TitleBarCloseButton))
+        self.closeButton = ToolButton(
+            self.style().standardIcon(QStyle.SP_TitleBarCloseButton))
         self.closeButton.clicked.connect(self.userClose)
         layout.addWidget(self.closeButton, 0, 9, 1, 1)
 
         # 弹幕区域
         self.textBrowser = QTextBrowser()
-        self.textBrowser.setFont(QFont('Microsoft JhengHei', 16, QFont.Bold))
+        self.textBrowser.setFont(QFont('Microsoft JhengHei', 14, QFont.Bold))
         self.textBrowser.setStyleSheet('border-width:1')
         # textCursor = self.textBrowser.textCursor()
         # textBlockFormat = QTextBlockFormat()
@@ -123,9 +135,16 @@ class TextBrowser(QWidget):
 
         # 同传区域
         self.transBrowser = QTextBrowser()
-        self.transBrowser.setFont(QFont('Microsoft JhengHei', 16, QFont.Bold))
+        self.transBrowser.setFont(QFont('Microsoft JhengHei', 14, QFont.Bold))
         self.transBrowser.setStyleSheet('border-width:1')
         layout.addWidget(self.transBrowser, 2, 0, 1, 10)
+
+        # 信息区域
+        self.msgsBrowser = QTextBrowser()
+        self.msgsBrowser.setFont(QFont('Microsoft JhengHei', 14, QFont.Bold))
+        self.msgsBrowser.setStyleSheet('border-width:1')
+        # self.msgsBrowser.setMaximumHeight(100)
+        layout.addWidget(self.msgsBrowser, 3, 0, 1, 10)
 
     def userClose(self):
         self.hide()

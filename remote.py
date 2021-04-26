@@ -25,7 +25,8 @@ class remoteThread(QThread):
                 return
             headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 \
 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 QIHU 360SE'}
-            html = requests.get('https://live.bilibili.com/' + self.roomID, headers=headers).text
+            html = requests.get('https://live.bilibili.com/' +
+                                self.roomID, headers=headers).text
             for line in html.split('\n'):
                 if '"roomid":' in line:
                     self.roomID = line.split('"roomid":')[1].split(',')[0]
@@ -77,22 +78,77 @@ class remoteThread(QThread):
                 pass
             return
 
+        captainName = {
+            0: "",
+            1: "总督",
+            2: "提督",
+            3: "舰长"
+        }
+
+        userType = {
+            "#FF7C28": "+++",
+            "#E17AFF": "++",
+            "#00D1F1": "+",
+            "": ""
+        }
+
+        adminType = ["", "*"]
+
+        def getMetal(jd):
+            try:
+                medal = []
+                if jd['cmd'] == 'DANMU_MSG':
+                    jz = captainName[jd['info'][3][10]]
+                    if jz:
+                        medal.append(jz)
+                    medal.append(jd['info'][3][1])
+                    medal.append(str(jd['info'][3][0]))
+                else:
+                    jz = captainName[jd['data']['medal_info']['guard_level']]
+                    if jz:
+                        medal.append(jz)
+                    medal.append(jd['data']['medal_info']['medal_name'])
+                    medal.append(jd['data']['medal_info']['medal_level'])
+                return "|" + "|".join(medal) + "|"
+            except:
+                return ""
+
         if op == 5:
             try:
                 jd = json.loads(data[16:].decode('utf-8', errors='ignore'))
                 if jd['cmd'] == 'DANMU_MSG':
-                    self.message.emit(jd['info'][1])
+                    self.message.emit(
+                        f"{userType[jd['info'][2][7]]}{adminType[jd['info'][2][2]]}{getMetal(jd)} {jd['info'][2][1]}: {jd['info'][1]}"
+                    )
                 elif jd['cmd'] == 'SUPER_CHAT_MESSAGE':
-                    d = jd['data']
-                    self.message.emit('\nSC: ¥%s\n【%s】\n' % (d['price'], d['message']))
-                # elif jd['cmd'] == 'SEND_GIFT':
-                #     d = jd['data']
-                #     self.message.emit('%s投喂了%s个%s' % (d['uname'], d['num'], d['giftName']))
-                # elif jd['cmd'] == 'COMBO_SEND':
-                #     d = jd['data']
-                #     self.message.emit('%s投喂了%s个%s' % (d['uname'], d['batch_combo_num'], d['gift_name']))
-                # elif jd['cmd'] == 'GUARD_BUY':
-                #     self.message.emit('%s上了舰长' % jd['data']['username'])
+                    self.message.emit(
+                        f"SC(￥{jd['data']['price']}) {getMetal(jd)} {jd['data']['user_info']['uname']}: {jd['data']['message']}"
+                    )
+                elif jd['cmd'] == 'SEND_GIFT':
+                    if jd['data']['coin_type'] == "gold":
+                        self.message.emit(
+                            f"** {jd['data']['uname']} {jd['data']['action']}了 {jd['data']['num']} 个 {jd['data']['giftName']}"
+                        )
+                elif jd['cmd'] == 'USER_TOAST_MSG':
+                    self.message.emit(
+                        f"** {jd['data']['username']} 上了 {jd['data']['num']} 个 {captainName[jd['data']['guard_level']]}"
+                    )
+                elif jd['cmd'] == 'ROOM_BLOCK_MSG':
+                    self.message.emit(
+                        f"** 用户 {jd['data']['uname']} 已被管理员禁言"
+                    )
+                elif jd['cmd'] == 'INTERACT_WORD':
+                    self.message.emit(
+                        f"## 用户 {jd['data']['uname']} 进入直播间"
+                    )
+                elif jd['cmd'] == 'ENTRY_EFFECT':
+                    self.message.emit(
+                        f"## {jd['data']['copy_writing_v2']}"
+                    )
+                elif jd['cmd'] == 'COMBO_SEND':
+                    self.message.emit(
+                        f"** {jd['data']['uname']} 共{jd['data']['action']}了 {jd['data']['combo_num']} 个 {jd['data']['gift_name']}"
+                    )
             except:
                 logging.exception('弹幕输出失败')
 
