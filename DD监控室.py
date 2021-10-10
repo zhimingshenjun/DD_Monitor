@@ -96,8 +96,7 @@ class DockWidget(QDockWidget):
         self.setWindowTitle(title)
         self.setObjectName(f'dock-{title}')
         self.setFloating(False)
-        self.setAllowedAreas(Qt.LeftDockWidgetArea |
-                             Qt.RightDockWidgetArea | Qt.TopDockWidgetArea)
+        self.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea | Qt.TopDockWidgetArea)
 
 
 class StartLiveWindow(QWidget):
@@ -149,8 +148,7 @@ class CacheSetting(QWidget):
         layout.addWidget(okButton, 2, 3, 1, 1)
 
     def selectCopyPath(self):
-        savePath = QFileDialog.getExistingDirectory(
-            self, "选择备份缓存路径", None, QFileDialog.ShowDirsOnly)
+        savePath = QFileDialog.getExistingDirectory(self, "选择备份缓存路径", None, QFileDialog.ShowDirsOnly)
         if savePath:
             self.savePathEdit.setText(savePath)
 
@@ -167,9 +165,9 @@ class Version(QWidget):
         self.resize(350, 150)
         self.setWindowTitle('当前版本')
         layout = QGridLayout(self)
-        layout.addWidget(QLabel('DD监控室 v2.6正式版'), 0, 0, 1, 2)
+        layout.addWidget(QLabel('DD监控室 v2.8正式版'), 0, 0, 1, 2)
         layout.addWidget(QLabel('by 神君Channel'), 1, 0, 1, 2)
-        layout.addWidget(QLabel('特别鸣谢：大锅饭 美东矿业 inkydragon'), 2, 0, 1, 2)
+        layout.addWidget(QLabel('特别鸣谢：大锅饭 美东矿业 inkydragon 聪_哥'), 2, 0, 1, 2)
         releases_url = QLabel('')
         releases_url.setOpenExternalLinks(True)
         releases_url.setText(_translate("MainWindow", "<html><head/><body><p><a href=\"https://space.bilibili.com/637783\">\
@@ -182,8 +180,7 @@ class Version(QWidget):
         layout.addWidget(checkButton, 0, 2, 1, 1)
 
     def checkUpdate(self):
-        QDesktopServices.openUrl(
-            QUrl(r'https://github.com/zhimingshenjun/DD_Monitor/releases/tag/DD_Monitor'))
+        QDesktopServices.openUrl(QUrl(r'https://github.com/zhimingshenjun/DD_Monitor/releases/tag/DD_Monitor'))
 
 
 class HotKey(QWidget):
@@ -209,16 +206,14 @@ class DumpConfig(QThread):
 
     def run(self):
         try:
-            configJSONPath = os.path.join(
-                application_path, r'utils/config.json')
+            configJSONPath = os.path.join(application_path, r'utils/config.json')
             with codecs.open(configJSONPath, 'w', encoding='utf-8') as f:
                 f.write(json.dumps(self.config, ensure_ascii=False))
         except:
             logging.exception('config.json 写入失败')
 
         try:  # 备份 防止存储config时崩溃
-            configJSONPath = os.path.join(
-                application_path, r'utils/config_备份%d.json' % self.backupNumber)
+            configJSONPath = os.path.join(application_path, r'utils/config_备份%d.json' % self.backupNumber)
             self.backupNumber += 1
             if self.backupNumber == 4:
                 self.backupNumber = 1
@@ -234,12 +229,11 @@ class CheckDanmmuProvider(QThread):
     """检查弹幕服务器域名解析状态"""
 
     def __init__(self):
-        super(CheckDanmmuProvider, self).__init__()
-
+        super(CheckDanmmuProvider,self).__init__()
+    
     def run(self):
         try:
-            anwsers = dns.resolver.resolve(
-                'broadcastlv.chat.bilibili.com', 'A')
+            anwsers = dns.resolver.resolve('broadcastlv.chat.bilibili.com', 'A')
             danmu_ip = anwsers[0].to_text()
             logging.info("弹幕IP: %s" % danmu_ip)
         except Exception as e:
@@ -381,7 +375,7 @@ class MainWindow(QMainWindow):
         vlcProgressCounter = 1
         for i in range(16):
             if len(self.config['danmu'][i]) < 8:
-                self.config['danmu'][i].append(0)
+                self.config['danmu'][i].append(3)
             volume = self.config['volume'][i]
             progressText.setText('设置第%s个主层播放器...' % str(i + 1))
             self.videoWidgetList.append(VideoWidget(i, volume, cacheFolder, textSetting=self.config['danmu'][i],

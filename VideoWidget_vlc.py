@@ -407,7 +407,7 @@ class VideoWidget(QFrame):
         # 关闭窗口
         self.stop = PushButton(self.style().standardIcon(
             QStyle.SP_DialogCancelButton))
-        self.stop.clicked.connect(self.mediaStop)
+        self.stop.clicked.connect(self._mediaStop)
         frameLayout.addWidget(self.stop)
 
         # ---- IO 交互设置 ----
@@ -430,6 +430,10 @@ class VideoWidget(QFrame):
         self.moveTimer = QTimer()
         self.moveTimer.timeout.connect(self.initTextPos)
         self.moveTimer.start(50)
+
+        # self.reloadDanmuTimer = QTimer()
+        # self.reloadDanmuTimer.timeout.connect(self.reloadDanmu)
+        # self.reloadDanmuTimer.start(10000)
 
         # 检查播放卡住的定时器
         self.checkPlaying = QTimer()
@@ -892,11 +896,7 @@ class VideoWidget(QFrame):
     #     self.setTranslator.emit([self.id, False])
 
     def stopDanmuMessage(self):
-        try:
-            self.danmu.message.disconnect(self.playDanmu)
-        except:
-            logging.exception('停止弹幕出错')
-        self.danmu.terminate()
+        self.stopDanmu()
 
     def showDanmu(self):
         if self.textBrowser.isHidden():
@@ -986,6 +986,9 @@ class VideoWidget(QFrame):
         else:
             self.mediaStop()
 
+    def _mediaStop(self):
+        self.mediaStop()
+
     def mediaStop(self, deleteMedia=True):
         # self.userPause = True
         self.oldTitle, self.oldUname = '', ''
@@ -997,16 +1000,26 @@ class VideoWidget(QFrame):
         self.play.setIcon(self.style().standardIcon(QStyle.SP_MediaPlay))
         if deleteMedia:
             self.deleteMedia.emit(self.id)
-        try:
-            self.danmu.message.disconnect(self.playDanmu)
-        except:
-            logging.exception('停止弹幕出错')
         self.getMediaURL.recordToken = False
         self.getMediaURL.checkTimer.stop()
         self.checkPlaying.stop()
+        self.stopDanmu()
+
+    def stopDanmu(self):
+        # try:
+        try:
+            self.danmu.message.disconnect(self.playDanmu)
+        except:
+            pass
         self.danmu.terminate()
         self.danmu.quit()
         self.danmu.wait()
+
+    def reloadDanmu(self):
+        self.stopDanmu()
+        self.danmu.setRoomID(self.roomID)
+        self.danmu.message.connect(self.playDanmu)
+        self.danmu.start()
 
     def setMedia(self, cacheName):
         self.retryTimes = 0
@@ -1016,7 +1029,8 @@ class VideoWidget(QFrame):
         try:
             self.danmu.message.disconnect(self.playDanmu)
         except:
-            logging.exception('停止弹幕出错')
+            pass
+            # logging.exception('停止弹幕出错')
         if self.startWithDanmu:
             self.danmu.message.connect(self.playDanmu)
             self.danmu.terminate()
@@ -1126,7 +1140,7 @@ class VideoWidget(QFrame):
                     self.textBrowser.msgsBrowser.append(message)
             return
         for symbol in self.filters:
-            if symbol in message[message.find(': ')+2:]:
+            if symbol in message:
                 self.textBrowser.transBrowser.append(message)
                 token = True
                 break

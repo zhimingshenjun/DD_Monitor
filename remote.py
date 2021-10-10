@@ -6,15 +6,22 @@ import asyncio
 import zlib
 import json
 import requests
-from aiowebsocket.converses import AioWebSocket
+# from aiowebsocket.converses import AioWebSocket
 from PyQt5.QtCore import QThread, pyqtSignal
 import logging
+from bilibili_api import live
+
+
+class Live(live.LiveDanmaku):
+
+    def __init__(self, room_display_id):
+        super().__init__(room_display_id)
+
+    def register(self, event: str, func: callable):
+        self.__getattribute__("_LiveDanmaku__event_handlers")[event].append(func)
 
 
 class remoteThread(QThread):
-    """
-    TODO: 换用 bilibili_api.live.LiveDanmaku(room_display_id)
-    """
     message = pyqtSignal(str)
 
     def __init__(self, roomID):
@@ -31,32 +38,38 @@ class remoteThread(QThread):
                 if '"roomid":' in line:
                     self.roomID = line.split('"roomid":')[1].split(',')[0]
 
-    async def startup(self, url):
-        logging.info('尝试打开 %s 的弹幕Socket' % self.roomID)
-        data_raw = '000000{headerLen}0010000100000007000000017b22726f6f6d6964223a{roomid}7d'
-        data_raw = data_raw.format(headerLen=hex(27 + len(self.roomID))[2:],
-                                   roomid=''.join(map(lambda x: hex(ord(x))[2:], list(self.roomID))))
-        async with AioWebSocket(url) as aws:
-            try:
-                converse = aws.manipulator
-                await converse.send(bytes.fromhex(data_raw))
-                tasks = [self.receDM(converse), self.sendHeartBeat(converse)]
-                await asyncio.wait(tasks)
-            except:
-                logging.exception('弹幕Socket打开失败')
+    async def startup(self):
+        self.roomID = int(self.roomID)
+        self.room = Live(self.roomID)
+        self.room.add_event_listener('DANMU_MSG', self.danmu)  # 用户发送弹幕
+        # self.room.add_event_listener('SEND_GIFT', self.gift)  # 礼物
+        # self.room.add_event_listener('COMBO_SEND', self.combo_gift)  # 礼物连击
+        # self.room.add_event_listener('GUARD_BUY', self.guard)  # 续费大航海
+        self.room.add_event_listener('SUPER_CHAT_MESSAGE', self.sc)  # 醒目留言（SC）
+        # self.room.add_event_listener('INTERACT_WORD', self.enter)  # 用户进入直播间
+        await self.room.connect()
+        # await asyncio.wait([self.room.connect()])
 
-    async def sendHeartBeat(self, websocket):
-        logging.debug("向%s发送心跳包" % self.roomID)
-        hb = '00000010001000010000000200000001'
-        while True:
-            await asyncio.sleep(30)
-            await websocket.send(bytes.fromhex(hb))
+    async def danmu(self, jd):
+        self.message.emit(jd['data']['info'][1])
 
-    async def receDM(self, websocket):
-        while True:
-            recv_text = await websocket.receive()
-            logging.debug("从%s接收到DM" % self.roomID)
-            self.printDM(recv_text)
+    async def gift(self, event):
+        print(event)
+
+    async def combo_gift(self, event):
+        print(event)
+
+    async def guard(self, event):
+        print(event)
+
+    async def sc(self, jd):
+        jd = jd['data']
+        self.message.emit(
+            f"【SC(￥{jd['data']['price']}) {jd['data']['user_info']['uname']}: {jd['data']['message']}】"
+        )
+
+    async def enter(self, event):
+        print(event)
 
     def printDM(self, data):
         packetLen = int(data[:4].hex(), 16)
@@ -118,11 +131,12 @@ class remoteThread(QThread):
                 jd = json.loads(data[16:].decode('utf-8', errors='ignore'))
                 if jd['cmd'] == 'DANMU_MSG':
                     self.message.emit(
-                        f"{userType[jd['info'][2][7]]}{adminType[jd['info'][2][2]]}{getMetal(jd)} {jd['info'][2][1]}: {jd['info'][1]}"
+                        # f"{userType[jd['info'][2][7]]}{adminType[jd['info'][2][2]]}{getMetal(jd)} {jd['info'][2][1]}: {jd['info'][1]}"
+                        f"{jd['info'][1]}"
                     )
                 elif jd['cmd'] == 'SUPER_CHAT_MESSAGE':
                     self.message.emit(
-                        f"SC(￥{jd['data']['price']}) {getMetal(jd)} {jd['data']['user_info']['uname']}: {jd['data']['message']}"
+                        f"【SC(￥{jd['data']['price']}) {getMetal(jd)} {jd['data']['user_info']['uname']}: {jd['data']['message']}】"
                     )
                 elif jd['cmd'] == 'SEND_GIFT':
                     if jd['data']['coin_type'] == "gold":
@@ -153,12 +167,8 @@ class remoteThread(QThread):
                 logging.exception('弹幕输出失败')
 
     def setRoomID(self, roomID):
-        self.roomID = roomID
+        self.roomID = int(roomID)
 
     def run(self):
-        remote = r'wss://broadcastlv.chat.bilibili.com:2245/sub'
-        try:
-            asyncio.set_event_loop(asyncio.new_event_loop())
-            asyncio.get_event_loop().run_until_complete(self.startup(remote))
-        except:
-            logging.exception('弹幕主循环出错')
+        asyncio.set_event_loop(asyncio.new_event_loop())
+        asyncio.get_event_loop().run_until_complete(self.startup())
