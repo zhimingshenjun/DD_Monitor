@@ -121,7 +121,7 @@ class remoteThread(QThread):
                     if jz:
                         medal.append(jz)
                     medal.append(jd['data']['medal_info']['medal_name'])
-                    medal.append(jd['data']['medal_info']['medal_level'])
+                    medal.append(str(jd['data']['medal_info']['medal_level']))
                 return "|" + "|".join(medal) + "|"
             except:
                 return ""
